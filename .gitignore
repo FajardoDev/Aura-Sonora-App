@@ -41,3 +41,7 @@ app-example
 # generated native folders
 /ios
 /android
+
+
+google-services.json
+aura-sonora-push-notification-firebase-adminsdk-fbsvc-de13612e8f.json
