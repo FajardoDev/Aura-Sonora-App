@@ -3,6 +3,7 @@
 # dependencies
 node_modules/
 
+
 # Expo
 .expo/
 dist/
@@ -32,6 +33,8 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
 
 # typescript
 *.tsbuildinfo
@@ -45,3 +48,5 @@ app-example
 
 google-services.json
 aura-sonora-push-notification-firebase-adminsdk-fbsvc-de13612e8f.json
+
+

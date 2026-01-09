@@ -83,7 +83,7 @@ export default function PodcastDetail() {
 
   const allEpisodes: Episode[] =
     podcastEpisodesQuery.data?.pages.flatMap(
-      (page) => page.episodes // <-- Accede a 'stations' dentro de cada 'page'
+      (page) => page.episodes // <-- Accede a 'podcast' dentro de cada 'page'
     ) ?? [];
 
   // 2. FILTRADO: Limpia los duplicados antes de guardarlos en el estado

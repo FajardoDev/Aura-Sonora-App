@@ -109,14 +109,15 @@ const ComentariosList: React.FC<Props> = memo(
         }
         ListEmptyComponent={() => (
           <>
-            <ThemedText className="text-gray-400 text-center mt-3 mb-10">
+            <ThemedText className="text-gray-400 text-center mt-3 mb-32">
               No hay comentarios aún.
             </ThemedText>
           </>
         )}
         contentContainerStyle={{
           paddingHorizontal: 0,
-          paddingBottom: streamUrl ? 100 : 100,
+          // paddingBottom: streamUrl ? 100 : 100,
+          paddingBottom: streamUrl ? 200 : 100,
         }}
         scrollEnabled={false}
         nestedScrollEnabled

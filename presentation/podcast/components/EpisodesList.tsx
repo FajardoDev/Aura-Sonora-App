@@ -1,3 +1,4 @@
+import { API_URL } from "@/core/api/radioPodcastApi";
 import { useRegisterLatestView } from "@/core/radio-podcast/actions/radio-podcast/hooks/useRegisterLatestView";
 import { Episode } from "@/core/radio-podcast/interface/podcast/podcast-episodes.interface";
 import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
@@ -186,102 +187,122 @@ export default function EpisodesList({
           🎙️ Episodios
         </ThemedText>
 
-        {episodes.map((ep) => {
-          const stream = extractDirectAudioLink(ep.links);
-          const isCurrent = streamUrl === stream;
-          const isActive = activatedId === ep.id;
-          const showAsPlaying = isCurrent && isPlaying;
+        {/* 1. Filtramos para eliminar duplicados por título antes de mapear */}
+        {episodes
+          .filter((ep, index, self) => {
+            // Función para quitar tildes y dejar en minúsculas
+            const normalize = (text: string) =>
+              text
+                ?.toLowerCase()
+                .normalize("NFD") // Separa la letra de la tilde
+                .replace(/[\u0300-\u036f]/g, "") // Elimina la tilde
+                .trim();
 
-          const destacado = ep.id === highlightedEpisodeId;
+            const currentTitle = normalize(ep.episodeTitle);
 
-          // console.log(ep.image);p
+            return (
+              index ===
+              self.findIndex((t) => normalize(t.episodeTitle) === currentTitle)
+            );
+          })
+          .map((ep) => {
+            const stream = extractDirectAudioLink(ep.links);
+            const isCurrent = streamUrl === stream;
+            const isActive = activatedId === ep.id;
+            const showAsPlaying = isCurrent && isPlaying;
+            const destacado = ep.id === highlightedEpisodeId;
 
-          return (
-            <View
-              key={ep.id}
-              className="bg-black/5 dark:bg-white/5 rounded-2xl mb-3 p-3 border border-white/10"
-            >
-              {/* Imagen + Info + Botón */}
-              <ThemedView className="flex-row items-center justify-between rounded-md">
-                {/* Imagen */}
+            // console.log({ ep }); // Solo para depuración
 
-                <Image
-                  source={
-                    ep.image
-                      ? { uri: getImageUrl(ep.image), cache: "force-cache" }
-                      : require("../../../assets/images/radio-podcast.jpg")
-                  }
-                  style={{
-                    width: 75,
-                    height: 75,
-                    borderRadius: 15,
-                    marginRight: 7,
-                  }}
-                  // className="w-20 h-20 rounded-xl mr-3"
-                  contentFit="cover" // mejor que resizeMode
-                  transition={500} // fade suave al cargar
-                  placeholder={require("../../../assets/images/podcasts.png")}
-                  priority="high" // alta prioridad de carga
-                />
+            return (
+              <View
+                key={ep.id}
+                className="bg-black/5 dark:bg-white/5 rounded-2xl mb-3 p-3 border border-white/10"
+              >
+                {/* Imagen + Info + Botón */}
+                <ThemedView className="flex-row items-center justify-between rounded-md">
+                  {/* Imagen */}
 
-                <ShareButton
-                  // className="absolute bg-black/70 rounded-full p-1 top-1 left-1 z-20"
-                  title={`🎙️ ${ep.episodeTitle}`}
-                  description={`Del podcast ${ep.episodeTitle}`}
-                  url={`exp://192.168.100.58:8081/podcast/${ep.podcast.slug}?episode=${ep.slug}`}
-                  // url={`exp://p0wl5ro-fajardodevs-8081.exp.direct/podcast/${ep.podcast.slug}?episode=${ep.slug}`}
+                  <Image
+                    source={
+                      ep.image
+                        ? { uri: getImageUrl(ep.image), cache: "force-cache" }
+                        : require("../../../assets/images/radio-podcast.jpg")
+                    }
+                    style={{
+                      width: 75,
+                      height: 75,
+                      borderRadius: 15,
+                      marginRight: 7,
+                    }}
+                    // className="w-20 h-20 rounded-xl mr-3"
+                    contentFit="cover" // mejor que resizeMode
+                    transition={500} // fade suave al cargar
+                    placeholder={require("../../../assets/images/podcasts.png")}
+                    priority="high" // alta prioridad de carga
+                  />
 
-                  // url={`${API_URL}/podcast/${ep.podcast.slug}/${ep.id}`}
-                  // url={`https://tudominio.com/podcast/${ep.podcast.slug}/${ep.id}`}
-                />
+                  <ShareButton
+                    // className="absolute bg-black/70 rounded-full p-1 top-1 left-1 z-20"
+                    title={`🎙️ ${ep.episodeTitle}`}
+                    description={`Del podcast ${ep.episodeTitle}`}
+                    url={`${API_URL}/podcastrd/${ep.podcast.slug}?episode=${ep.slug}`}
+                    // url={`exp://p0wl5ro-fajardodevs-8081.exp.direct/podcast/${ep.podcast.slug}?episode=${ep.slug}`}
 
-                {/* Info */}
-                <View className="flex-1 mr-3">
-                  {destacado && (
-                    <ThemedText className="text-[#ff6b6b] font-bold">
-                      Nuevo
-                    </ThemedText>
-                  )}
-                  <ThemedText
-                    className="text-base font-semibold"
-                    numberOfLines={2}
-                  >
-                    {ep.episodeTitle}
-                  </ThemedText>
+                    // url={`${API_URL}/podcast/${ep.podcast.slug}/${ep.id}`}
+                    // url={`https://tudominio.com/podcast/${ep.podcast.slug}/${ep.id}`}
+                  />
 
-                  <View className="flex-row justify-between items-center">
-                    <View>
-                      <ThemedText className="text-xs mt-1">
-                        {new Date(ep.episodeDate).toLocaleDateString("es-DO", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                  {/* Info */}
+                  <View className="flex-1 mr-3">
+                    {destacado && (
+                      <ThemedText className="text-[#ff6b6b] font-bold">
+                        Nuevo
                       </ThemedText>
+                    )}
+                    <ThemedText
+                      className="text-base font-semibold"
+                      numberOfLines={2}
+                    >
+                      {ep.episodeTitle}
+                    </ThemedText>
+
+                    <View className="flex-row justify-between items-center">
+                      <View>
+                        <ThemedText className="text-xs mt-1">
+                          {new Date(ep.episodeDate).toLocaleDateString(
+                            "es-DO",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }
+                          )}
+                        </ThemedText>
+                      </View>
+
+                      <View>
+                        <EpisodeDownloadButton
+                          urls={ep.links}
+                          title={ep.episodeTitle}
+                          episodeId={ep.id}
+                          image={ep.image}
+                          podcastTitle={ep.podcast.titleEncabezado}
+                          description={ep.episodeDescription}
+                        />
+                      </View>
                     </View>
 
-                    <View>
-                      <EpisodeDownloadButton
-                        urls={ep.links}
-                        title={ep.episodeTitle}
-                        episodeId={ep.id}
-                        image={ep.image}
-                        podcastTitle={ep.podcast.titleEncabezado}
-                        description={ep.episodeDescription}
-                      />
-                    </View>
-                  </View>
-
-                  {/*                 
+                    {/*                 
                   {ep.duration && (
                     <ThemedText className="text-xs mt-1">
                       {ep.duration}
                     </ThemedText>
                   )} */}
 
-                  {/* <View className="absolute ml-28 mt-8"> */}
-                  {/* <View className="absolute ml-34 mt-[42px]"> */}
-                  {/* <View className="">
+                    {/* <View className="absolute ml-28 mt-8"> */}
+                    {/* <View className="absolute ml-34 mt-[42px]"> */}
+                    {/* <View className="">
                     <EpisodeDownloadButton
                       urls={ep.links}
                       title={ep.episodeTitle}
@@ -291,53 +312,37 @@ export default function EpisodesList({
                       description={ep.episodeDescription}
                     />
                   </View> */}
-                </View>
+                  </View>
 
-                {/* Botón reproducir */}
-                <TouchableOpacity
-                  className="bg-black/5 dark:bg-white p-2 rounded-full"
-                  onPress={() => handlePlayClick(ep)}
+                  {/* Botón reproducir */}
+                  <TouchableOpacity
+                    className="bg-black/5 dark:bg-white p-2 rounded-full"
+                    onPress={() => handlePlayClick(ep)}
+                  >
+                    <Ionicons
+                      name={
+                        showAsPlaying
+                          ? "pause-circle"
+                          : isActive
+                            ? "play-circle"
+                            : "play-circle-outline"
+                      }
+                      size={38}
+                      color="#ef4444"
+                    />
+                  </TouchableOpacity>
+                </ThemedView>
+
+                {/* Descripción */}
+                <ThemedText
+                  className="text-sm mt-3 leading-5"
+                  numberOfLines={4}
                 >
-                  <Ionicons
-                    name={
-                      showAsPlaying
-                        ? "pause-circle"
-                        : isActive
-                          ? "play-circle"
-                          : "play-circle-outline"
-                    }
-                    size={38}
-                    color="#ef4444"
-                  />
-                </TouchableOpacity>
-              </ThemedView>
-
-              {/* Descripción */}
-              <ThemedText className="text-sm mt-3 leading-5" numberOfLines={4}>
-                {ep.episodeDescription}
-              </ThemedText>
-            </View>
-          );
-        })}
-
-        {/* {episodes.map((ep) => (
-					<EpisodeItem
-						key={ep.id}
-						ep={ep}
-						onPlay={handlePlayClick} // tu handler ya existente
-						isPlayingGlobalStreamUrl={streamUrl}
-					/>
-				))} */}
-
-        {/* Indicador de carga mientras busca más episodios */}
-        {/* {isFetching && (
-					<View className="items-center mt-4">
-						<ActivityIndicator color="#ef4444" />
-						<Text className="text-gray-400 mt-2 text-sm">
-							Cargando episodios...
-						</Text>
-					</View>
-				)} */}
+                  {ep.episodeDescription}
+                </ThemedText>
+              </View>
+            );
+          })}
 
         {/* 🔘 Botones de paginación */}
         <View className="flex-row justify-between px-5 py-4 border-t border-gray-800">
@@ -387,28 +392,141 @@ export default function EpisodesList({
   );
 }
 
+//  {episodes.map((ep) => {
+//           const stream = extractDirectAudioLink(ep.links);
+//           const isCurrent = streamUrl === stream;
+//           const isActive = activatedId === ep.id;
+//           const showAsPlaying = isCurrent && isPlaying;
+
+//           const destacado = ep.id === highlightedEpisodeId;
+
+//           console.log({ ep });
+
+//           return (
+//             <View
+//               key={ep.id}
+//               className="bg-black/5 dark:bg-white/5 rounded-2xl mb-3 p-3 border border-white/10"
+//             >
+//               {/* Imagen + Info + Botón */}
+//               <ThemedView className="flex-row items-center justify-between rounded-md">
+//                 {/* Imagen */}
+
+//                 <Image
+//                   source={
+//                     ep.image
+//                       ? { uri: getImageUrl(ep.image), cache: "force-cache" }
+//                       : require("../../../assets/images/radio-podcast.jpg")
+//                   }
+//                   style={{
+//                     width: 75,
+//                     height: 75,
+//                     borderRadius: 15,
+//                     marginRight: 7,
+//                   }}
+//                   // className="w-20 h-20 rounded-xl mr-3"
+//                   contentFit="cover" // mejor que resizeMode
+//                   transition={500} // fade suave al cargar
+//                   placeholder={require("../../../assets/images/podcasts.png")}
+//                   priority="high" // alta prioridad de carga
+//                 />
+
+//                 <ShareButton
+//                   // className="absolute bg-black/70 rounded-full p-1 top-1 left-1 z-20"
+//                   title={`🎙️ ${ep.episodeTitle}`}
+//                   description={`Del podcast ${ep.episodeTitle}`}
+//                   url={`${API_URL}/podcast/${ep.podcast.slug}?episode=${ep.slug}`}
+//                   // url={`exp://p0wl5ro-fajardodevs-8081.exp.direct/podcast/${ep.podcast.slug}?episode=${ep.slug}`}
+
+//                   // url={`${API_URL}/podcast/${ep.podcast.slug}/${ep.id}`}
+//                   // url={`https://tudominio.com/podcast/${ep.podcast.slug}/${ep.id}`}
+//                 />
+
+//                 {/* Info */}
+//                 <View className="flex-1 mr-3">
+//                   {destacado && (
+//                     <ThemedText className="text-[#ff6b6b] font-bold">
+//                       Nuevo
+//                     </ThemedText>
+//                   )}
+//                   <ThemedText
+//                     className="text-base font-semibold"
+//                     numberOfLines={2}
+//                   >
+//                     {ep.episodeTitle}
+//                   </ThemedText>
+
+//                   <View className="flex-row justify-between items-center">
+//                     <View>
+//                       <ThemedText className="text-xs mt-1">
+//                         {new Date(ep.episodeDate).toLocaleDateString("es-DO", {
+//                           year: "numeric",
+//                           month: "long",
+//                           day: "numeric",
+//                         })}
+//                       </ThemedText>
+//                     </View>
+
+//                     <View>
+//                       <EpisodeDownloadButton
+//                         urls={ep.links}
+//                         title={ep.episodeTitle}
+//                         episodeId={ep.id}
+//                         image={ep.image}
+//                         podcastTitle={ep.podcast.titleEncabezado}
+//                         description={ep.episodeDescription}
+//                       />
+//                     </View>
+//                   </View>
+
+//                   {/*
+//                   {ep.duration && (
+//                     <ThemedText className="text-xs mt-1">
+//                       {ep.duration}
+//                     </ThemedText>
+//                   )} */}
+
+//                   {/* <View className="absolute ml-28 mt-8"> */}
+//                   {/* <View className="absolute ml-34 mt-[42px]"> */}
+//                   {/* <View className="">
+//                     <EpisodeDownloadButton
+//                       urls={ep.links}
+//                       title={ep.episodeTitle}
+//                       episodeId={ep.id}
+//                       image={ep.image}
+//                       podcastTitle={ep.podcast.titleEncabezado}
+//                       description={ep.episodeDescription}
+//                     />
+//                   </View> */}
+//                 </View>
+
+//                 {/* Botón reproducir */}
+//                 <TouchableOpacity
+//                   className="bg-black/5 dark:bg-white p-2 rounded-full"
+//                   onPress={() => handlePlayClick(ep)}
+//                 >
+//                   <Ionicons
+//                     name={
+//                       showAsPlaying
+//                         ? "pause-circle"
+//                         : isActive
+//                           ? "play-circle"
+//                           : "play-circle-outline"
+//                     }
+//                     size={38}
+//                     color="#ef4444"
+//                   />
+//                 </TouchableOpacity>
+//               </ThemedView>
+
+//               {/* Descripción */}
+//               <ThemedText className="text-sm mt-3 leading-5" numberOfLines={4}>
+//                 {ep.episodeDescription}
+//               </ThemedText>
+//             </View>
+//           );
+//         })}
+
 /*
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 	 Botones de paginación 
 				{/* <View className="flex-row justify-between mt-6">

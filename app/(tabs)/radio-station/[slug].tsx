@@ -104,7 +104,7 @@ export default function DetallesSlugScreenEmisoras() {
         radioData.slug,
         radioData.radioid,
         radioData.description,
-        radioData.isFavorite,
+        // radioData.isFavorite,
         "radio" //!MODIFIQUEE
       );
 

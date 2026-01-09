@@ -1,3 +1,4 @@
+import { API_URL } from "@/core/api/radioPodcastApi";
 import { useRegisterLatestView } from "@/core/radio-podcast/actions/radio-podcast/hooks/useRegisterLatestView";
 import { useToggleFavorite } from "@/core/radio-podcast/actions/radio-podcast/hooks/useToggleFavorite";
 import {
@@ -266,7 +267,7 @@ export default function FavoriteGridItem({
             className="absolute bg-[rgba(0,0,0,0.7)] rounded-full p-1 top-1 left-1 z-20"
             title={`Escucha ${item.radioname}`}
             description="Sintoniza tu emisora favorita en vivo."
-            url={`exp://192.168.100.58:8081/radio-station/${item.slug}`}
+            url={`${API_URL}/radio-station/${item.slug}`}
             // url={`https://tudominio.com/radio-station/${emisora.slug}`}
           />
         )}

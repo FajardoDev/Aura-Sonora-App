@@ -12,6 +12,7 @@ import * as SecureStore from "expo-secure-store";
 import { useColorScheme } from "nativewind";
 import React, { memo, useEffect, useRef, useState } from "react";
 // import { Animated, Easing } from "react-native";
+import { API_URL } from "@/core/api/radioPodcastApi";
 import {
   ActivityIndicator,
   Animated,
@@ -418,7 +419,12 @@ const AudioPlayer = () => {
 
   const onShare = async () => {
     // 1. Configuramos la URL base (puedes cambiarla luego por tu dominio real)
-    const baseUrl = "exp://192.168.100.58:8081";
+    // const baseUrl = "exp://192.168.100.58:8081";
+    // const baseUrl = process.env.EXPO_PUBLIC_API_URL;
+    // 2. Esta es para compartir (Externa)
+    // const baseUrl = "https://aura-sonora-production.up.railway.app";
+
+    // console.log({ baseUrl });
 
     // 2. Definimos el contenido según el tipo (Condicional Pro)
     const isRadio = type === "radio";
@@ -426,8 +432,8 @@ const AudioPlayer = () => {
     const shareOptions = {
       title: isRadio ? `Radio en Vivo: ${radioName}` : `Podcast: ${radioName}`,
       message: isRadio
-        ? `¡Estoy escuchando ${radioName} en vivo! 📻\nSintoniza conmigo aquí:\n${baseUrl}/radio-station/${slug}`
-        : `Te recomiendo este episodio de "${radioName}" 🎙️\nEscúchalo aquí:\n${baseUrl}/podcast/${slug}?episode=${episodeSlug}`,
+        ? `¡Estoy escuchando ${radioName} en vivo! 📻\nSintoniza conmigo aquí:\n${API_URL}/radio-station/${slug}`
+        : `Te recomiendo este episodio de "${radioName}" 🎙️\nEscúchalo aquí:\n${API_URL}/podcastrd/${slug}?episode=${episodeSlug}`,
     };
 
     try {
@@ -622,7 +628,7 @@ const AudioPlayer = () => {
 
             <View
               // className="absolute right-0 bottom-[40px] z-[999]"
-              className={`absolute z-[999] ${isPodcast ? "bottom-[52px] right-2" : "bottom-[40px] right-0"}`}
+              className={`absolute z-[999] right-2 ${isPodcast ? "bottom-[52px]" : "bottom-[40px] right-0"}`}
               style={{
                 elevation: 14, // Android
                 shadowColor: "#fb7185", // iOS (sombra tintada)
