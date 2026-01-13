@@ -52,20 +52,6 @@ const AudioPlayer = () => {
     type,
   } = useAudioPlayerStore();
 
-  // const isFavorite = useAudioPlayerStore((state) => state.isFavorite);
-  // const queryClient = useQueryClient();
-
-  // const { mutate, isPending } = useToggleFavorite();
-
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     // aquí usas isFavorite
-  //     console.log("Favorite al enfocar:", isFavorite);
-  //   }, [isFavorite])
-  // );
-
-  // console.log({ radioid });
-
   const { colorScheme } = useColorScheme();
   const isDarkMode = colorScheme === "dark";
   const textColorClass = isDarkMode ? "#fff" : "#000";
@@ -128,63 +114,13 @@ const AudioPlayer = () => {
     setIsFullPlayerVisible(true);
   };
 
-  // useEffect(() => {
-  //   const unsubscribe = queryClient
-  //     .getMutationCache()
-  //     .subscribe((event: any) => {
-  //       if (event.type === "updated") {
-  //         const mutation = event.mutation;
-
-  //         if (
-  //           mutation.state.status === "success" &&
-  //           mutation.options.mutationKey?.includes("toggleFavorite")
-  //         ) {
-  //           // 🔥 ACCESO EN TIEMPO REAL AL STORE
-  //           const currentState = useAudioPlayerStore.getState();
-
-  //           const variables = mutation.state.variables as any;
-  //           const toggledSlug = variables?.radioSlug || variables?.podcastSlug;
-
-  //           // Comparamos el slug que mutó afuera con el que está sonando REALMENTE ahora
-  //           if (toggledSlug && toggledSlug === currentState.slug) {
-  //             const newStatusFromServer = mutation.state.data?.isFavorite;
-
-  //             if (typeof newStatusFromServer === "boolean") {
-  //               // Sincronizamos el corazón del reproductor con el valor del servidor
-  //               setIsFavorite(newStatusFromServer);
-  //             } else {
-  //               // Si el servidor no devuelve data, simplemente invertimos el estado actual del store
-  //               setIsFavorite(!currentState.isFavorite);
-  //             }
-  //             console.log(
-  //               "🔄 Sincronización externa detectada para:",
-  //               toggledSlug
-  //             );
-  //           }
-  //         }
-  //       }
-  //     });
-
-  //   return () => unsubscribe();
-  // }, []); // 👈 Importante: Vacío para que la suscripción sea global y persistente
-
-  // useEffect(() => {
-  //   if (!streamUrl) return;
-  //   const saveFav = async () => {
-  //     await SecureStore.setItemAsync(
-  //       "isFavorite",
-  //       isFavorite ? "true" : "false"
-  //     );
-  //   };
-  //   saveFav();
-  // }, [isFavorite]); // Se dispara cada vez que el corazón cambie
-
   // 🎯 1. CONFIGURACIÓN INICIAL
   useEffect(() => {
     setAudioModeAsync({
       playsInSilentMode: true,
       shouldPlayInBackground: true,
-      interruptionModeAndroid: "duckOthers",
+      // interruptionModeAndroid: "duckOthers",
+      interruptionModeAndroid: "doNotMix", // El audio de tu app es prioritario
       interruptionMode: "mixWithOthers",
       allowsRecording: false,
     });
@@ -281,84 +217,9 @@ const AudioPlayer = () => {
 
   const isRadio = type === "radio";
 
-  // const handleToggleFavorite = () => {
-  //   if (isPending || !slug) return;
-
-  //   const previousValue = isFavorite; // Guardamos el valor actual por si falla
-  //   const newValue = !isFavorite;
-
-  //   const payload: FavoriteTogglePayload = {
-  //     type: type as any,
-  //     radioSlug: type === "radio" ? slug : undefined,
-  //     podcastSlug: type === "podcast" ? slug : undefined,
-  //   };
-
-  //   // 1. Cambio visual instantáneo
-  //   setIsFavorite(newValue);
-
-  //   // 2. Mandar al servidor
-  //   mutate(payload, {
-  //     onError: () => {
-  //       // Si falla, volvemos al valor que teníamos guardado
-  //       setIsFavorite(previousValue);
-  //     },
-  //   });
-  // };
-
   // 1. Estados necesarios
   const [isSleepModalVisible, setIsSleepModalVisible] = useState(false);
   const [sleepTimeLeft, setSleepTimeLeft] = useState<number | null>(null);
-
-  // 2. Lógica del Timer corregida (Sin errores de TS)
-  // useEffect(() => {
-  //   let interval: any; // Usamos 'any' para evitar el conflicto entre number y Timeout en RN
-
-  //   if (sleepTimeLeft !== null && sleepTimeLeft > 0) {
-  //     interval = setInterval(() => {
-  //       setSleepTimeLeft((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
-  //     }, 60000); // Cada minuto
-  //   } else if (sleepTimeLeft === 0) {
-  //     player.pause();
-  //     togglePlay(false);
-  //     setSleepTimeLeft(null);
-  //   }
-
-  //   return () => clearInterval(interval);
-  // }, [sleepTimeLeft]);
-
-  // 2. Lógica del Timer con EFECTO PREMIUM (Fade-out)
-  // useEffect(() => {
-  //   let interval: any;
-
-  //   if (sleepTimeLeft !== null && sleepTimeLeft > 0) {
-  //     // Mientras el tiempo sea mayor a 0, descontamos cada minuto
-  //     interval = setInterval(() => {
-  //       setSleepTimeLeft((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
-  //     }, 60000);
-  //   } else if (sleepTimeLeft === 0) {
-  //     // --- AQUÍ ENTRA EL EFECTO PREMIUM ---
-  //     let fadeVol = volume; // Empezamos desde el volumen actual
-
-  //     const fadeInterval = setInterval(() => {
-  //       if (fadeVol > 0.1) {
-  //         fadeVol -= 0.1;
-  //         player.volume = fadeVol; // Bajamos el hardware poco a poco
-  //       } else {
-  //         // Cuando ya casi no se oye, apagamos todo
-  //         clearInterval(fadeInterval);
-  //         player.pause();
-  //         togglePlay(false);
-  //         setSleepTimeLeft(null); // Limpiamos el timer
-
-  //         // Restauramos el volumen en el hardware para que la próxima vez
-  //         // que el usuario de "Play" se escuche normal
-  //         player.volume = volume;
-  //       }
-  //     }, 200); // Se ejecuta cada 200ms
-  //   }
-
-  //   return () => clearInterval(interval);
-  // }, [sleepTimeLeft]);
 
   // 2. Lógica del Timer con EFECTO PREMIUM (Fade-out Corregido)
   useEffect(() => {
@@ -404,28 +265,7 @@ const AudioPlayer = () => {
   };
 
   // compartir
-  // const onShare = async () => {
-  //   try {
-  //     await Share.share({
-  //       message: `¡Escucha ${radioName} conmigo en mi App de Radio! 📻\nLink: https://tuweb.com/radio/${slug}`,
-  //       title: `Escuchando ${radioName}`,
-  //     });
-  //   } catch (error) {
-  //     console.error("Error al compartir:", error);
-  //   }
-  // };
-
-  // console.log({ episodeSlug });
-
   const onShare = async () => {
-    // 1. Configuramos la URL base (puedes cambiarla luego por tu dominio real)
-    // const baseUrl = "exp://192.168.100.58:8081";
-    // const baseUrl = process.env.EXPO_PUBLIC_API_URL;
-    // 2. Esta es para compartir (Externa)
-    // const baseUrl = "https://aura-sonora-production.up.railway.app";
-
-    // console.log({ baseUrl });
-
     // 2. Definimos el contenido según el tipo (Condicional Pro)
     const isRadio = type === "radio";
 
@@ -463,7 +303,7 @@ const AudioPlayer = () => {
   const isPodcast = type === "podcast";
   const bannerMusic = !isPlaying
     ? require("../../assets/images/igualada.png")
-    : require("../../assets/images/igualada.gif");
+    : require("../../assets/images/igualada-reproduciendo.gif");
   const isSameSlug = pathname.includes(slug || "---");
 
   return (
@@ -493,22 +333,6 @@ const AudioPlayer = () => {
               }}
             />
           </TouchableWithoutFeedback>
-
-          {/* Control de Volumen */}
-          {/* {showVolumeControl && (
-            <View className="flex-row items-center mx-4 w-full absolute top-2 z-50">
-              <Ionicons name="volume-low" size={20} color="#f43f5e" />
-              <Slider
-                style={{ flex: 1 }}
-                minimumValue={0}
-                maximumValue={1}
-                value={player.volume}
-                onValueChange={(v) => (player.volume = v)}
-                minimumTrackTintColor="#f43f5e"
-              />
-              <Ionicons name="volume-high" size={20} color="#f43f5e" />
-            </View>
-          )} */}
 
           <View
             className="flex-row items-center justify-between"
@@ -610,20 +434,6 @@ const AudioPlayer = () => {
                   />
                 </TouchableOpacity>
               )}
-
-              {/* <TouchableOpacity
-                onPress={() => setShowVolumeControl(!showVolumeControl)}
-              >
-                <Ionicons
-                  name="volume-medium"
-                  size={20}
-                  color={textColorClass}
-                />
-              </TouchableOpacity> */}
-
-              {/* <TouchableOpacity onPress={() => clearStream()}>
-                <Ionicons name="close-circle" size={20} color="#fb7185" />
-              </TouchableOpacity> */}
             </View>
 
             <View
@@ -645,26 +455,6 @@ const AudioPlayer = () => {
                 <Ionicons name="chevron-up" size={17} color="#fff" />
               </TouchableOpacity>
             </View>
-
-            {/* <View
-              // className="absolute right-40 left-30 bottom-5 z-[999]"
-              className="absolute right-0 bottom-10"
-              style={{
-                elevation: 14, // Android
-                shadowColor: "#fb7185", // iOS (sombra tintada)
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.4,
-                shadowRadius: 10,
-              }}
-            >
-              <TouchableOpacity
-                onPress={() => setIsFullPlayerVisible(true)}
-                activeOpacity={0.75}
-                className="bg-rose-500 p-1 rounded-full"
-              >
-                <Ionicons name="arrow-up" size={25} color="#fff" />
-              </TouchableOpacity>
-            </View> */}
           </View>
 
           {/* <ion-icon name="arrow-up-circle-outline"></ion-icon> */}
@@ -698,11 +488,9 @@ const AudioPlayer = () => {
       {/* 2. EL REPRODUCTOR FULL SCREEN (Sin librerías raras) */}
       <Modal
         visible={isFullPlayerVisible}
-        // animationType="slide"
         transparent
         animationType="none"
         presentationStyle="overFullScreen"
-        // onRequestClose={() => setIsFullPlayerVisible(false)}
         statusBarTranslucent
       >
         {/* Backdrop */}
@@ -747,14 +535,6 @@ const AudioPlayer = () => {
               >
                 <Ionicons name="chevron-down" size={35} color="white" />
               </TouchableOpacity>
-
-              {/* <TouchableOpacity
-                // onPress={() => setIsFullPlayerVisible(false)}
-                onPress={closeFullPlayer}
-                className="absolute top-12 right-5 z-50 p-2"
-              >
-                <Ionicons name="chevron-down" size={35} color="white" />
-              </TouchableOpacity> */}
 
               <TouchableOpacity
                 className="absolute top-12 right-2 z-50 p-2 items-center"
@@ -993,23 +773,6 @@ const AudioPlayer = () => {
 
                 {type === "podcast" && (
                   <View className="flex-row justify-around w-full py-3 border-t border-white/10 mt-2">
-                    {/* BOTÓN FAVORITOS (Grande y con efecto) */}
-                    {/* <TouchableOpacity
-                className="items-center"
-                onPress={handleToggleFavorite}
-                disabled={isPending}
-                // onPress={() => toggleFavorite(radioid)} // Necesitaremos esta función en tu store
-              >
-                <Ionicons
-                  name={isFavorite ? "heart" : "heart-outline"}
-                  size={32}
-                  color={"#f43f5e"}
-                />
-                <ThemedText className="text-white text-[10px] mt-1">
-                  Favorito
-                </ThemedText>
-              </TouchableOpacity> */}
-
                     {/* BOTÓN COMPARTIR */}
 
                     <TouchableOpacity
@@ -1052,23 +815,6 @@ const AudioPlayer = () => {
                         {sleepTimeLeft ? "Activo" : "Dormir"}
                       </ThemedText>
                     </TouchableOpacity>
-
-                    {/* <TouchableOpacity
-                      className="items-center"
-                      onPress={() => clearStream()}
-                      activeOpacity={0.7}
-                    >
-                      <View className="bg-rose-500/20 p-3 rounded-full mb-1">
-                        <Ionicons
-                          name="close-circle"
-                          size={28}
-                          color="#fb7185"
-                        />
-                      </View>
-                      <ThemedText className="text-rose-500 text-[10px] font-medium uppercase tracking-wider">
-                        Cerrar
-                      </ThemedText>
-                    </TouchableOpacity> */}
                   </View>
                 )}
 

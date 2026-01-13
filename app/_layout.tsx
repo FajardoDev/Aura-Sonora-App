@@ -16,6 +16,7 @@ import {
   useTheme,
 } from "@/presentation/context/ThemeChangerContext";
 import { usePushNotifications } from "@/presentation/hooks/usePushNotifications";
+// import { PlaybackService } from "@/services/trackPlayerService";
 import { LogBox, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import {
@@ -24,6 +25,10 @@ import {
 } from "react-native-safe-area-context";
 
 SplashScreen.preventAutoHideAsync();
+
+// 🔥 CRÍTICO: Esto debe ir AQUÍ, fuera de cualquier componente o useEffect
+// Esto registra el servicio nativo de audio en el hilo principal de la app.
+// TrackPlayer.registerPlaybackService(() => PlaybackService);
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -123,6 +128,21 @@ function RootLayoutContent() {
   if (!rootNavigationState?.key || !fontsLoaded || status === "cheking") {
     return null;
   }
+
+  // useEffect(() => {
+  //   // Inicialización silenciosa del player al arrancar la app
+  //   const setupPlayer = async () => {
+  //     try {
+  //       // Verifica si ya está inicializado para evitar errores
+  //       await TrackPlayer.setupPlayer();
+  //       console.log("✅ TrackPlayer listo");
+  //     } catch (error) {
+  //       // Si ya estaba inicializado, fallará silenciosamente, lo cual está bien
+  //     }
+  //   };
+
+  //   setupPlayer();
+  // }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: bgColor }}>
