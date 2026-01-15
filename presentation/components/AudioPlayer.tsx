@@ -16,6 +16,7 @@ import { API_URL } from "@/core/api/radioPodcastApi";
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   Easing,
   Image,
   ImageBackground,
@@ -306,6 +307,9 @@ const AudioPlayer = () => {
     : require("../../assets/images/igualada-reproduciendo.gif");
   const isSameSlug = pathname.includes(slug || "---");
 
+  const { width, height } = Dimensions.get("window");
+  const isTablet = width > 768;
+
   return (
     <>
       <PlayerBackground>
@@ -527,67 +531,87 @@ const AudioPlayer = () => {
                 />
               </ImageBackground>
 
-              {/* 2. BOTÓN CERRAR (ABSOLUTO PARA NO ESTORBAR) */}
-              <TouchableOpacity
-                // onPress={() => setIsFullPlayerVisible(false)}
-                onPress={closeFullPlayer}
-                className="absolute top-12 left-5 z-50 p-2"
-              >
-                <Ionicons name="chevron-down" size={35} color="white" />
-              </TouchableOpacity>
+              {/* HEADER */}
+              <View className="flex-row justify-between items-center pt-12 z-50 px-8">
+                <TouchableOpacity
+                  onPress={closeFullPlayer}
+                  className="bg-white/10 w-11 h-11 items-center justify-center rounded-full backdrop-blur-md border border-white/20"
+                >
+                  <Ionicons name="chevron-down" size={28} color="white" />
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                className="absolute top-12 right-2 z-50 p-2 items-center"
-                onPress={() => clearStream()}
-                activeOpacity={0.7}
-              >
-                <View className="bg-rose-500/40 p-3 rounded-full mb-1">
-                  <Ionicons name="close-circle" size={20} color="white" />
+                <View className="items-center">
+                  <ThemedText className="text-white/60 text-[10px] font-black uppercase tracking-[3px]">
+                    Reproduciendo
+                  </ThemedText>
                 </View>
-                <ThemedText className="text-white text-[9px] font-medium uppercase tracking-wider">
-                  Cerrar
-                </ThemedText>
-              </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => clearStream()}
+                  className="bg-rose-500/20 w-11 h-11 items-center justify-center rounded-full border border-rose-500/30"
+                >
+                  {/* <Ionicons name="stop" size={20} color="#f43f5e" /> */}
+                  <Ionicons name="close-circle" size={20} color="#f43f5e" />
+                </TouchableOpacity>
+              </View>
 
               {/* 3. CONTENIDO PRINCIPAL */}
-              <View className="flex-1 justify-around items-center px-8 pt-20 pb-10">
-                {/* Imagen de la Radio (Card Premium) */}
+              <View className="flex-1 justify-around items-center px-8 pt-5 pb-20">
+                {/* Cover */}
                 <View
+                  className={`aspect-square shadow-2xl shadow-black/80 ${isTablet ? "w-96" : "w-full max-w-[300px]"}`}
                   style={{
-                    width: 280,
-                    height: 280,
-                    borderRadius: 20,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 10 },
-                    shadowOpacity: 0.5,
+                    borderRadius: 24,
+                    elevation: 20,
                     shadowRadius: 15,
-                    elevation: 10,
+                    width: isRadio ? 280 : "100%",
+                    height: isRadio ? 280 : "50%",
                   }}
                 >
                   <Image
-                    source={{ uri: radioimg as any }}
+                    source={radioimg ? { uri: radioimg } : undefined}
+                    // className="w-full h-full rounded-3xl border border-white/10"
                     style={{
                       width: "100%",
                       height: "100%",
                       borderRadius: 20,
-                      backgroundColor: "white",
+                      backgroundColor: isRadio ? "white" : "",
                     }}
-                    resizeMode="contain"
+                    resizeMode={`${type === "podcast" ? "cover" : "contain"}`}
                   />
                 </View>
 
                 {/* Títulos */}
-                <View className="items-center">
-                  <ThemedText className="text-white text-3xl font-bold text-center">
+                <View className="items-center mt-2">
+                  <TextTicker
+                    // style={{ color: textColorClass, fontWeight: "bold" }}
+                    duration={10000}
+                    loop
+                    repeatSpacer={50}
+                    className="text-white text-2xl font-black text-center mb-3"
+                  >
                     {radioName}
-                  </ThemedText>
-                  <ThemedText className="text-rose-500 text-lg mt-1 font-medium">
+                  </TextTicker>
+
+                  {/* <ThemedText
+                    className="text-white text-2xl font-black text-center mb-3"
+                    numberOfLines={1}
+                  >
+                    {radioName}
+                  </ThemedText> */}
+
+                  <View className="bg-rose-600 px-3 py-1 rounded-full mb-2">
+                    <ThemedText className="text-white text-[8px] font-bold uppercase tracking-wider">
+                      {type === "podcast" ? "• Podcast Episode" : "• En Vivo"}
+                    </ThemedText>
+                  </View>
+                  {/* <ThemedText className="text-rose-500 text-lg mt-1 font-medium">
                     {type === "podcast"
                       ? "Episodio de Podcast"
                       : "Radio en Vivo"}
-                  </ThemedText>
+                  </ThemedText> */}
 
-                  <View
+                  {/* <View
                     style={{
                       padding: 6, // Espacio para que respire la sombra
                       backgroundColor: "#FFF",
@@ -597,8 +621,8 @@ const AudioPlayer = () => {
                     <Image
                       source={bannerMusic}
                       style={{
-                        width: 54,
-                        height: 54,
+                        width: 30,
+                        height: 30,
                         // borderRadius: 12,
 
                         // iOS Shadow
@@ -615,7 +639,7 @@ const AudioPlayer = () => {
                       }}
                       resizeMode="contain"
                     />
-                  </View>
+                  </View> */}
                 </View>
 
                 {/* Slider (Solo si es Podcast) */}
@@ -918,6 +942,20 @@ const AudioPlayer = () => {
     </>
   );
 };
+
+// Componente auxiliar para botones de acción
+const ActionButton = ({ icon, label, onPress, active = false }: any) => (
+  <TouchableOpacity onPress={onPress} className="items-center space-y-2">
+    <View
+      className={`p-4 rounded-full ${active ? "bg-rose-600" : "bg-white/10"}`}
+    >
+      <Ionicons name={icon} size={26} color="white" />
+    </View>
+    <ThemedText className="text-white/60 text-[10px] font-bold uppercase tracking-widest">
+      {label}
+    </ThemedText>
+  </TouchableOpacity>
+);
 
 export default memo(AudioPlayer);
 // export default AudioPlayer;

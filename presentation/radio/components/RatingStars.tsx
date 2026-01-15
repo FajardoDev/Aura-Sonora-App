@@ -22,7 +22,7 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
         <Ionicons
           key={`full-${index}`}
           name="star"
-          size={13}
+          size={10}
           color="#facc15" // Amarillo (Tailwind: yellow-400)
           className="mr-0.5"
         />
@@ -32,7 +32,7 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
       {hasHalfStar && (
         <Ionicons
           name="star-half"
-          size={13}
+          size={12}
           color="#facc15"
           className="mr-0.5"
         />
@@ -50,7 +50,7 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
       ))}
 
       {/* Cantidad de comentarios */}
-      <ThemedText className="text-sm text-white ml-1">
+      <ThemedText className="text-xs text-zinc-400 ml-1">
         ({commentsCount})
       </ThemedText>
     </View>

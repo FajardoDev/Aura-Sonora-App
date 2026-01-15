@@ -127,7 +127,6 @@ export default function RadioPoster({
         borderRadius: 12,
         shadowColor: "#000",
         boxShadow: "2px 2px 5px #011016",
-        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.15,
         shadowRadius: 4,
         elevation: 3,
@@ -165,34 +164,15 @@ export default function RadioPoster({
             height: 70,
             borderTopRightRadius: 10,
             borderTopLeftRadius: 10,
-            borderBottomRightRadius: 10,
-            borderBottomLeftRadius: 10,
+            // borderBottomRightRadius: 10,
+            // borderBottomLeftRadius: 10,
             opacity: isCurrentStation && isPlaying ? 0.25 : 1,
           }}
-          contentFit="cover" // mejor que resizeMode
+          contentFit="contain" // mejor que resizeMode
           transition={500} // fade suave al cargar
           placeholder={require("../../../assets/images/radios.png")} // opcional
           priority="high" // alta prioridad de carga
         />
-
-        {/* <Image
-						source={
-							emisora.radioimg
-								? { uri: emisora.radioimg, cache: "force-cache" }
-								: require("../../../assets/images/radio-studio.jpg")
-						}
-						style={{
-							width: "100%",
-							height: 65,
-							borderTopLeftRadius: 12,
-							borderTopRightRadius: 12,
-							opacity: isCurrentStation && isPlaying ? 0.25 : 1,
-						}}
-						contentFit="cover" // mejor que resizeMode
-						transition={500} // fade suave al cargar
-						placeholder={require("../../../assets/images/radios.png")} // opcional
-						priority="high" // alta prioridad de carga
-					/> */}
 
         {/* 🎧 Botón de play/pausa centrado */}
         {shouldShowButton && (
@@ -252,7 +232,7 @@ export default function RadioPoster({
         style={{
           paddingTop: 5,
           paddingBottom: 5,
-          backgroundColor: "#0c0c0cdf",
+          backgroundColor: "#011016",
           width: 125,
           // backgroundColor: "#f9fafb",
           borderBottomLeftRadius: 12,
@@ -262,24 +242,28 @@ export default function RadioPoster({
         <View className="p-1">
           <ThemedText
             numberOfLines={1}
-            className="text-white font-Roboto-SemiBold  mb-1"
+            className="text-white font-Roboto-ExtraBold mb-1 text-[13px]"
             // style={styles.titleText}
           >
             {emisora.radioname}
           </ThemedText>
 
-          <ThemedText
-            numberOfLines={2}
-            // style={styles.titleText}
-            className="text-xs leading-tight text-rose-500"
-          >
-            «Radio en vivo»
-          </ThemedText>
+          <View className="flex-row items-center mr-1">
+            <View className="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5 shadow-sm shadow-rose-500" />
+
+            <ThemedText
+              numberOfLines={1}
+              // style={styles.titleText}
+              className="text-xs leading-tight text-rose-500"
+            >
+              En vivo
+            </ThemedText>
+          </View>
         </View>
 
         {emisora.commentsCount > 0 && (
           <View className="flex-row mx-[4px] items-center">
-            <ThemedText className="text-sm text-white pr-[2px]">
+            <ThemedText className="text-[9px] text-white pr-[2px]">
               {emisora.averageRating.toFixed(1)}
             </ThemedText>
             <RatingStars

@@ -168,7 +168,7 @@ export default function HistoryGridItem({
             borderBottomLeftRadius: 10,
             opacity: isCurrentPlaying && isPlaying ? 0.25 : 1,
           }}
-          contentFit="cover" // mejor que resizeMode
+          contentFit={`${isRadio ? "cover" : "cover"}`} // mejor que resizeMode
           transition={500} // fade suave al cargar
           placeholder={require("../../assets/images/radio-podcast.jpg")} // opcional
           priority="high" // alta prioridad de carga
@@ -206,7 +206,6 @@ export default function HistoryGridItem({
             title={`Escucha ${item.radioname}`}
             description="Sintoniza tu emisora favorita en vivo."
             url={`${API_URL}/radio-station/${item.slug}`}
-            // url={`https://tudominio.com/radio-station/${emisora.slug}`}
           />
         )}
       </TouchableOpacity>
@@ -219,29 +218,42 @@ export default function HistoryGridItem({
         <View className="p-1">
           <ThemedText
             numberOfLines={1}
-            className="text-white font-Roboto-SemiBold mb-1"
-            // style={styles.titleText}
+            className="text-white font-Roboto-ExtraBold mb-1 text-[13px]"
           >
             {title}
           </ThemedText>
-          {item.subtitle && (
-            <ThemedText
-              numberOfLines={2}
-              // style={styles.titleText}
-              className="text-white text-xs leading-tight"
-            >
-              {item.subtitle}
-            </ThemedText>
-          )}
-        </View>
 
-        {/* <Text numberOfLines={1} style={styles.titleText}>
-					{item.title}
-				</Text> */}
+          {/* Contenedor de Subtítulo / Estado En Vivo */}
+          <View className="flex-row items-center">
+            {isRadio ? (
+              // ESTADO EN VIVO PARA RADIOS
+              <View className="flex-row items-center mr-1">
+                {/* El punto rojo ahora está alineado perfectamente */}
+                <View className="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5 shadow-sm shadow-rose-500" />
+                <ThemedText
+                  numberOfLines={1}
+                  className="text-rose-500 text-[10px] font-bold  tracking-wider font-Roboto-SemiBold"
+                >
+                  En Vivo
+                </ThemedText>
+              </View>
+            ) : (
+              // SUBTÍTULO PARA PODCASTS (Solo si existe)
+              item.subtitle && (
+                <ThemedText
+                  numberOfLines={1}
+                  className="text-zinc-400 text-[9px] font-medium uppercase tracking-wide font-Roboto-SemiBold"
+                >
+                  {item.subtitle}
+                </ThemedText>
+              )
+            )}
+          </View>
+        </View>
 
         {item.commentsCount > 0 && (
           <View className="flex-row mx-[4px] items-center">
-            <ThemedText className="text-sm text-white pr-[2px]">
+            <ThemedText className="text-[9px] text-white pr-[2px]">
               {item.averageRating.toFixed(1)}
             </ThemedText>
             <RatingStars
@@ -285,7 +297,8 @@ const styles = StyleSheet.create({
   detailsContainer: {
     paddingTop: 3,
     paddingBottom: 4,
-    backgroundColor: "#0c0c0cdf",
+    // backgroundColor: "#0c0c0cdf",
+    backgroundColor: "#011016",
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
   },

@@ -176,32 +176,75 @@ export const EpisodeDownloadButton: React.FC<Props> = ({
   return (
     <TouchableOpacity
       onPress={isDownloaded ? handleOpenLocal : handleDownload}
-      className={`flex-row items-center p-[5px] rounded-full ${
-        isDownloaded ? "bg-green-600" : "bg-rose-600/50"
+      activeOpacity={0.5}
+      className={`flex-row items-center px-4 py-1.5 rounded-full border ${
+        isDownloaded
+          ? "bg-green-500/10 border-green-500/50"
+          : "bg-red-500/5 border-red-500/10"
       }`}
       disabled={isDownloading || !!downloaded}
     >
       {isDownloading ? (
         <View className="flex-row items-center">
-          <ActivityIndicator size="small" color="#fff" />
-          <ThemedText className="ml-1 text-white text-xs animate-pulse">
-            Descargando... {Math.round(progress * 100)}%
+          <ActivityIndicator
+            size="small"
+            color="#f43f5e"
+            style={{ scaleX: 0.8, scaleY: 0.8 }}
+          />
+          <ThemedText className="ml-2 text-rose-500 text-[11px] font-bold">
+            {Math.round(progress * 100)}%
           </ThemedText>
         </View>
       ) : (
         <>
           <Ionicons
-            name={isDownloaded ? "checkmark-done-outline" : "download-outline"}
-            size={14}
-            color="white"
+            name={isDownloaded ? "checkmark-circle" : "cloud-download-outline"}
+            size={16}
+            color={isDownloaded ? "#22c55e" : "red"}
           />
-          <ThemedText className="ml-2 text-white text-sm">
-            {isDownloaded ? "Descargado" : "Descargar"}
+          <ThemedText
+            className={`ml-2 text-[11px] font-bold tracking-wide uppercase ${
+              isDownloaded
+                ? "text-green-500"
+                : "text-zinc-900 dark:text-zinc-50"
+            }`}
+          >
+            {isDownloaded ? "Guardado" : "Descargar"}
           </ThemedText>
         </>
       )}
     </TouchableOpacity>
   );
+
+  // return (
+  //   <TouchableOpacity
+  //     onPress={isDownloaded ? handleOpenLocal : handleDownload}
+  //     className={`flex-row items-center p-[5px] rounded-full ${
+  //       isDownloaded ? "bg-green-600" : "bg-rose-600/50"
+  //     }`}
+  //     disabled={isDownloading || !!downloaded}
+  //   >
+  //     {isDownloading ? (
+  //       <View className="flex-row items-center">
+  //         <ActivityIndicator size="small" color="#fff" />
+  //         <ThemedText className="ml-1 text-white text-xs animate-pulse">
+  //           Descargando... {Math.round(progress * 100)}%
+  //         </ThemedText>
+  //       </View>
+  //     ) : (
+  //       <>
+  //         <Ionicons
+  //           name={isDownloaded ? "checkmark-done-outline" : "download-outline"}
+  //           size={14}
+  //           color="white"
+  //         />
+  //         <ThemedText className="ml-2 text-white text-sm">
+  //           {isDownloaded ? "Descargado" : "Descargar"}
+  //         </ThemedText>
+  //       </>
+  //     )}
+  //   </TouchableOpacity>
+  // );
 };
 
 // import { useDownloadsStore } from "@/presentation/podcast/store/useDownloadsStore";

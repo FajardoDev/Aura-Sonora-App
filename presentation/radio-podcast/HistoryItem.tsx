@@ -178,8 +178,6 @@ export default function HistoryItem({ item }: HistoryItemProps) {
         shadowOpacity: 0.15,
         shadowRadius: 4,
         elevation: 3,
-        maxWidth: 140,
-        // maxWidth: 160,
       }}
     >
       {/* Contenedor de imagen y botones de control */}
@@ -196,14 +194,15 @@ export default function HistoryItem({ item }: HistoryItemProps) {
           }
           style={{
             width: "100%",
-            height: isRadio ? 70 : 110,
+            height: isRadio ? 70 : 120,
+            // height: isRadio ? 70 : 110,
             borderTopRightRadius: 10,
             borderTopLeftRadius: 10,
             borderBottomRightRadius: 10,
             borderBottomLeftRadius: 10,
             opacity: isCurrentPlaying && isPlaying ? 0.25 : 1,
           }}
-          contentFit="contain" // mejor que resizeMode
+          contentFit="cover" // mejor que resizeMode
           transition={500} // fade suave al cargar
           placeholder={
             item.type === "podcast"
@@ -244,7 +243,6 @@ export default function HistoryItem({ item }: HistoryItemProps) {
             title={`Escucha ${item.radioname}`}
             description="Sintoniza tu emisora favorita en vivo."
             url={`${API_URL}/radio-station/${item.slug}`}
-            // url={`https://tudominio.com/radio-station/${emisora.slug}`}
           />
         )}
       </TouchableOpacity>
@@ -257,30 +255,43 @@ export default function HistoryItem({ item }: HistoryItemProps) {
         <View className="p-1">
           <ThemedText
             numberOfLines={1}
-            className="text-white font-Roboto-SemiBold mb-1"
+            className="text-white font-Roboto-ExtraBold mb-1 text-[13px]"
             // style={styles.titleText}
           >
             {item.title}
           </ThemedText>
-          {item.subtitle && (
-            <ThemedText
-              numberOfLines={2}
-              // style={styles.titleText}
-              // className="text-white text-xs leading-tight"
-              className={`${isRadio ? "text-rose-500" : "text-white"} text-xs leading-tight`}
-            >
-              {item.subtitle}
-            </ThemedText>
-          )}
-        </View>
 
-        {/* <Text numberOfLines={1} style={styles.titleText}>
-					{item.title}
-				</Text> */}
+          {/* Contenedor de Subtítulo / Estado En Vivo */}
+          <View className="flex-row items-center">
+            {isRadio ? (
+              // ESTADO EN VIVO PARA RADIOS
+              <View className="flex-row items-center mr-1">
+                {/* El punto rojo ahora está alineado perfectamente */}
+                <View className="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5 shadow-sm shadow-rose-500" />
+                <ThemedText
+                  numberOfLines={1}
+                  className="text-rose-500 text-[10px] font-bold  tracking-wider font-Roboto-SemiBold"
+                >
+                  En Vivo
+                </ThemedText>
+              </View>
+            ) : (
+              // SUBTÍTULO PARA PODCASTS (Solo si existe)
+              item.subtitle && (
+                <ThemedText
+                  numberOfLines={1}
+                  className="text-zinc-400 text-[9px] font-medium uppercase tracking-wide font-Roboto-SemiBold"
+                >
+                  {item.subtitle}
+                </ThemedText>
+              )
+            )}
+          </View>
+        </View>
 
         {item.commentsCount > 0 && (
           <View className="flex-row mx-[4px] items-center">
-            <ThemedText className="text-sm text-white pr-[2px]">
+            <ThemedText className="text-[9px] text-white pr-[2px]">
               {item.averageRating.toFixed(1)}
             </ThemedText>
             <RatingStars
@@ -355,10 +366,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailsContainer: {
-    paddingTop: 5,
-    paddingBottom: 5,
-    backgroundColor: "#0c0c0cdf",
-    width: 130,
+    paddingTop: 2,
+    paddingBottom: 3,
+    backgroundColor: "#011016",
+    // backgroundColor: "#0c0c0cdf",
+    width: 125,
     // height: 70,
     // backgroundColor: "#3d011f11",
     // backgroundColor: "#f9fafb",

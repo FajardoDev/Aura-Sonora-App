@@ -162,6 +162,7 @@ export default function PodcastDetail() {
       <ScrollView
         className="flex-1 bg-light-background dark:bg-dark-background"
         ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
       >
         <View className="px-1">
           <PodcastHeader podcast={podcastData.podcast} />

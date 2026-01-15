@@ -106,20 +106,6 @@ export default function PodcastPoster({
 
         style={{ position: "relative" }}
       >
-        {/* Imagen de la emisora */}
-        {/* <Image
-					source={{ uri: img }}
-					className="shadow-lg rounded-t-lg shadow-black w-full h-full"
-					style={{
-						width: "90%",
-						height: 90,
-						// width: smallPoster ? 160 : 260,
-						// height: smallPoster ? 85 : 160,
-						opacity: isCurrentStation && isPlaying ? 0.25 : 1,
-					}}
-					resizeMode="cover"
-				/> */}
-
         <Image
           source={
             img
@@ -173,9 +159,9 @@ export default function PodcastPoster({
       <TouchableOpacity
         onPress={handlePress}
         style={{
-          paddingTop: 5,
-          paddingBottom: 5,
-          backgroundColor: "#0c0c0cdf",
+          paddingTop: 2,
+          paddingBottom: 3,
+          backgroundColor: "#011016",
           width: 125,
           // backgroundColor: "#f9fafb",
           borderBottomLeftRadius: 12,
@@ -192,16 +178,16 @@ export default function PodcastPoster({
         <View className="p-1">
           <ThemedText
             numberOfLines={1}
-            className="text-white font-Roboto-SemiBold  mb-1"
+            className="text-white font-Roboto-ExtraBold mb-1 text-[13px]"
             // style={styles.titleText}
           >
             {podcasts.titleEncabezado}
           </ThemedText>
           {podcasts.titleSecond && (
             <ThemedText
-              numberOfLines={2}
+              numberOfLines={1}
               // style={styles.titleText}
-              className="text-white text-xs leading-tight"
+              className="text-zinc-400 text-[9px] font-medium uppercase tracking-wide font-Roboto-SemiBold"
             >
               {podcasts.titleSecond}
             </ThemedText>
@@ -210,7 +196,7 @@ export default function PodcastPoster({
 
         {podcasts.commentsCount > 0 && (
           <View className="flex-row mx-[4px] items-center">
-            <ThemedText className="text-sm text-white pr-[2px]">
+            <ThemedText className="text-[9px] text-white pr-[2px]">
               {podcasts.averageRating.toFixed(1)}
             </ThemedText>
             <RatingStars

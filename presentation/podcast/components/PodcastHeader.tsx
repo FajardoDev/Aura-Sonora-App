@@ -38,7 +38,16 @@ export default function PodcastHeader({ podcast }: Props) {
       />
 
       {/* Contenedor principal */}
-      <ThemedView className="flex-row items-center rounded-2xl dark:bg-white/10  backdrop-blur-md shadow-lg p-3 shadow-white/20">
+      <ThemedView
+        className="flex-row items-center rounded-xl backdrop-blur-md shadow-lg p-3 shadow-white/20"
+        style={{
+          // elevation: 2,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+        }}
+      >
         <ThemedView className="relative w-[30%] h-[170px] rounded-md">
           {/* Contenedor de imagen */}
           <ThemedView className="rounded-md">
@@ -106,7 +115,9 @@ export default function PodcastHeader({ podcast }: Props) {
                   //   shadowColor: "#000",
                   // })}
                 >
-                  <ThemedText className="text-xs font-medium">{cat}</ThemedText>
+                  <ThemedText className="text-xs font-medium font-Roboto-SemiBold">
+                    {cat}
+                  </ThemedText>
                 </TouchableOpacity>
               </Link>
             ))}
@@ -122,7 +133,7 @@ export default function PodcastHeader({ podcast }: Props) {
 						))}
 					</View> */}
 
-          <ThemedText className="text-sm mt-1">
+          <ThemedText className="text-sm mt-1 font-Roboto-Bold">
             {podcast.titleSecond}
           </ThemedText>
           {/* <Text className="text-sm text-gray-300 mt-1">

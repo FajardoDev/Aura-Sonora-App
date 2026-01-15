@@ -231,15 +231,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // filterButtons: {
-  //   width: "100%",
-  //   flexDirection: "row",
-  //   justifyContent: "space-around",
-  //   paddingVertical: 15,
-  //   borderBottomWidth: 1,
-  //   borderBottomColor: "#ddd",
-  //   marginBottom: 10,
-  // },
   button: {
     paddingHorizontal: 15,
     paddingVertical: 8,

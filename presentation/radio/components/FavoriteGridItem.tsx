@@ -224,23 +224,6 @@ export default function FavoriteGridItem({
           priority="high" // alta prioridad de carga
         />
 
-        {/* <Image
-					className="shadow-lg shadow-black"
-					source={
-						imageUrl
-							? { uri: imageUrl }
-							: require("../../../assets/images/radio-studio.jpg") // Placeholder
-					}
-					style={{
-						width: "100%",
-						height: 65,
-						borderTopLeftRadius: 12,
-						borderTopRightRadius: 12,
-						resizeMode: "cover",
-						opacity: isCurrentPlaying && isPlaying ? 0.25 : 1,
-					}}
-				/> */}
-
         {/* 🎧 Botón de play/pausa centrado */}
         {shouldShowButton && item.type === "radio" && (
           <View style={styles.playButtonContainer}>
@@ -268,7 +251,6 @@ export default function FavoriteGridItem({
             title={`Escucha ${item.radioname}`}
             description="Sintoniza tu emisora favorita en vivo."
             url={`${API_URL}/radio-station/${item.slug}`}
-            // url={`https://tudominio.com/radio-station/${emisora.slug}`}
           />
         )}
       </TouchableOpacity>
@@ -285,25 +267,42 @@ export default function FavoriteGridItem({
         <View className="p-1">
           <ThemedText
             numberOfLines={1}
-            className="text-white font-Roboto-SemiBold mb-1"
+            className="text-white font-Roboto-ExtraBold mb-1 text-[13px]"
             // style={styles.titleText}
           >
             {title}
           </ThemedText>
-          {titleSecond && (
-            <ThemedText
-              numberOfLines={2}
-              // style={styles.titleText}
-              className="text-white text-xs leading-tight"
-            >
-              {titleSecond}
-            </ThemedText>
-          )}
+          {/* Contenedor de Subtítulo / Estado En Vivo */}
+          <View className="flex-row items-center">
+            {isRadio ? (
+              // ESTADO EN VIVO PARA RADIOS
+              <View className="flex-row items-center mr-1">
+                {/* El punto rojo ahora está alineado perfectamente */}
+                <View className="w-1.5 h-1.5 bg-rose-500 rounded-full mr-1.5 shadow-sm shadow-rose-500" />
+                <ThemedText
+                  numberOfLines={1}
+                  className="text-rose-500 text-[10px] font-bold  tracking-wider font-Roboto-SemiBold"
+                >
+                  En Vivo
+                </ThemedText>
+              </View>
+            ) : (
+              // SUBTÍTULO PARA PODCASTS (Solo si existe)
+              titleSecond && (
+                <ThemedText
+                  numberOfLines={1}
+                  className="text-zinc-400 text-[9px] font-medium uppercase tracking-wide font-Roboto-SemiBold"
+                >
+                  {titleSecond}
+                </ThemedText>
+              )
+            )}
+          </View>
         </View>
 
         {item.commentsCount > 0 && (
           <View className="flex-row mx-[4px] items-center">
-            <ThemedText className="text-sm text-white pr-[2px]">
+            <ThemedText className="text-[9px] text-white pr-[2px]">
               {item.averageRating.toFixed(1)}
             </ThemedText>
             <RatingStars
@@ -312,16 +311,6 @@ export default function FavoriteGridItem({
             />
           </View>
         )}
-
-        {/* <View className="flex-row mx-[2px] items-center justify-center">
-          <ThemedText className="text-sm text-white pr-[2px]">
-            {item.averageRating.toFixed(1)}
-          </ThemedText>
-          <RatingStars
-            rating={item.averageRating}
-            commentsCount={item.commentsCount}
-          />
-        </View> */}
       </TouchableOpacity>
     </View>
   );
@@ -357,8 +346,7 @@ const styles = StyleSheet.create({
   detailsContainer: {
     paddingTop: 5,
     paddingBottom: 5,
-    width: 125,
-    backgroundColor: "#0c0c0cdf",
+    backgroundColor: "#011016",
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
   },

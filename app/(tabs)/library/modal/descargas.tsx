@@ -7,9 +7,11 @@ export default function DownloadsScreen() {
   const { streamUrl } = useAudioPlayerStore();
 
   return (
-    // <View className="">
+    // <View className=" ${streamUrl ? "pb-60" : "mb-40"}">
     <View
-      className={`flex-1 bg-light-background dark:bg-dark-background ${streamUrl ? "pb-60" : "mb-40"}`}
+      className={`flex-1 bg-light-background dark:bg-dark-background  
+       
+        `}
     >
       <DownloadedEpisodesList />
     </View>

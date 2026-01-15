@@ -176,7 +176,7 @@ export default function DetallesSlugScreenEmisoras() {
         }}
       />
 
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Imagen con fondo degradado y blur suave */}
         <View className="relative">
           <ImageBackground

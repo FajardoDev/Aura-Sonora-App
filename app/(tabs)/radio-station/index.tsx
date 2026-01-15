@@ -113,27 +113,6 @@ export default function RadioScreen() {
     );
   }
 
-  // if (radioStationQuery.isError) {
-  // 	const isNetworkError = radioStationQuery.error?.message?.includes(
-  // 		"Network request failed",
-  // 	);
-
-  // 	return (
-  // 		<View className="flex-1 items-center justify-center bg-light-background dark:bg-dark-background p-4">
-  // 			<ThemedText className="text-lg font-semibold">
-  // 				{isNetworkError
-  // 					? "Sin conexión a Internet"
-  // 					: "No se pudieron cargar las Emisoras"}
-  // 			</ThemedText>
-  // 			<ThemedText className="text-gray-500 text-center mt-2">
-  // 				{isNetworkError
-  // 					? "Revisa tu conexión o abre tus descargados sin conexión."
-  // 					: "Ocurrió un error inesperado, intenta de nuevo."}
-  // 			</ThemedText>
-  // 		</View>
-  // 	);
-  // }
-
   if (radioStationQuery.isError) {
     return (
       <View className="flex-1 items-center justify-center bg-light-background dark:bg-dark-background">
@@ -156,26 +135,6 @@ export default function RadioScreen() {
     <View className="flex-1 bg-light-background dark:bg-dark-background mt-0">
       <View className="">
         <PlayerBackground style={{ position: "absolute", inset: 0 }} />
-
-        {/* <View className="relative mx-3">
-         
-          <ThemeTextInput
-            placeholder="Busca emisoras..."
-            icon="radio-outline"
-            value={inputValue}
-            onChangeText={setInputValue} // Permanece reactivo
-            style={{ padding: 5, borderWidth: 1, paddingRight: 35 }}
-          />
-
-          {inputValue.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setInputValue("")}
-              className="absolute right-3 top-7 -translate-y-1/2"
-            >
-              <Ionicons name="close-circle" size={20} color="#9b9898" />
-            </TouchableOpacity>
-          )}
-        </View> */}
 
         {/* Contenedor relativo del buscador */}
         <View className="mx-3 relative">
@@ -249,59 +208,4 @@ export default function RadioScreen() {
       </View>
     </View>
   );
-
-  //  return (
-  //   /* 1. Usamos PlayerBackground como contenedor principal para que el gradiente cubra todo */
-  //   <PlayerBackground style={{ flex: 1 }}>
-  //     {/* Agregamos un View con mt-3 para mantener tu espaciado original */}
-  //     <View className="flex-1 mt-3">
-  //       <View className="relative mx-3">
-  //         {/* Busqueda */}
-  //         <ThemeTextInput
-  //           placeholder="Busca emisoras..."
-  //           icon="radio-outline"
-  //           value={inputValue}
-  //           onChangeText={setInputValue}
-  //           // Nota: quitamos el fondo del TextInput si quieres que sea translúcido
-  //           // o lo dejamos con su estilo para que resalte sobre el gradiente
-  //           style={{ padding: 5, borderWidth: 1, paddingRight: 35 }}
-  //         />
-
-  //         {inputValue.length > 0 && (
-  //           <TouchableOpacity
-  //             onPress={() => setInputValue("")}
-  //             className="absolute right-3 top-7 -translate-y-1/2"
-  //           >
-  //             <Ionicons name="close-circle" size={20} color="#9b9898" />
-  //           </TouchableOpacity>
-  //         )}
-  //       </View>
-
-  //       {/* 2. Loading State (quitamos bg-background para ver el gradiente) */}
-  //       {radioStationQuery.isLoading && !radioStationQuery.isFetching && (
-  //         <View className="flex-1 items-center justify-center">
-  //           <ActivityIndicator color={"#f43f5e"} />
-  //           <ThemedText>Buscando... 📻</ThemedText>
-  //         </View>
-  //       )}
-
-  //       {/* 3. Sin resultados */}
-  //       {!radioStationQuery.isFetching && allStations.length === 0 && (
-  //         <View style={{ margin: 20, alignItems: "center" }}>
-  //           <ThemedText className="text-center">
-  //             No hay resultados para: {inputValue} 😔
-  //           </ThemedText>
-  //         </View>
-  //       )}
-
-  //       {/* 4. Lista de resultados */}
-  //       <RadioGrid
-  //         emisoras={allStations}
-  //         loadNextPage={loadNextPage}
-  //         hasNextPage={hasNextPage}
-  //         isSearching={radioStationQuery.isFetchingNextPage}
-  //       />
-  //     </View>
-  //   </PlayerBackground>
-  // );
 }
