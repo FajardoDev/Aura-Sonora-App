@@ -1,3 +1,4 @@
+import type { EpisodeListen } from "@/presentation/listening/listening-model";
 import { useDownloadsStore } from "@/presentation/podcast/store/useDownloadsStore";
 import ThemedText from "@/presentation/theme/components/themed-text";
 import { extractDirectAudioLink } from "@/utils/urlEpisodes";
@@ -8,6 +9,7 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, TouchableOpacity, View } from "react-native";
 
 interface Props {
+  listeningSource?: EpisodeListen;
   urls: string[];
   title: string;
   podcastTitle?: string;
@@ -18,6 +20,7 @@ interface Props {
 
 export const EpisodeDownloadButton: React.FC<Props> = ({
   urls,
+  listeningSource,
   title,
   podcastTitle,
   image,
@@ -102,6 +105,7 @@ export const EpisodeDownloadButton: React.FC<Props> = ({
         // const img = getImageUrl(image);
 
         await addDownload({
+          listeningSource,
           id: episodeId,
           title,
           uri,

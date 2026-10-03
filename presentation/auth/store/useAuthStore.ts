@@ -7,10 +7,15 @@ import { User } from "@/core/auth/interface/user";
 import { queryClient } from "@/core/query-client/queryClient";
 import { SecureStorageAdapter } from "@/helpers/adapters/secure-storage.adapter";
 import { useAudioPlayerStore } from "@/presentation/radio/store/useAudioPlayerStore";
+import { useNotificationStore } from "@/presentation/radio-podcast/stores/notifications.store";
+import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
 
 export type AuthStatus = "authenticated" | "unauthenticated" | "cheking";
+
+let statusCheck: Promise<void> | undefined;
+let sessionVersion = 0;
 
 interface AuthState {
 	status: AuthStatus;
@@ -46,8 +51,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 	// Method ó Actions
 
 	setLastRoute: async (route) => {
-		await SecureStore.setItemAsync("lastRoute", route);
 		set({ lastRoute: route });
+		await SecureStorageAdapter.setItem("lastRoute", route);
 	},
 
 	getLastRoute: async () => {
@@ -62,6 +67,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 	},
 
 	chageStatus: async (accessToken?: string, user?: User) => {
+		sessionVersion++;
+		await queryClient.cancelQueries();
+		queryClient.clear();
+		useNotificationStore.getState().reset();
 		if (!accessToken || !user) {
 			set({
 				status: "unauthenticated",
@@ -74,10 +83,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 		}
 
 		// Si está autenticado
-		set({ status: "authenticated", accessToken: accessToken, user: user });
-
 		//! Guardar el token en el secure storage
 		await SecureStorageAdapter.setItem("accessToken", accessToken);
+		set({ status: "authenticated", accessToken, user });
 
 		return true;
 	},
@@ -85,8 +93,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 	login: async (email: string, password: string) => {
 		const resp = await authLogin(email, password);
 
-		// ✅ Limpia cache cuando entra otro usuario
-		queryClient.clear();
 		return get().chageStatus(resp?.accessToken, resp?.user);
 	},
 
@@ -97,22 +103,48 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 	},
 
 	checkStatus: async () => {
-		// if (get().user) { return; } // Probar user entre al colocar las credenciales correctas
-
-		const resp = await authCheckStatus();
-		get().chageStatus(resp?.accessToken, resp?.user);
+		if (statusCheck) return statusCheck;
+		if (get().status !== "cheking") return;
+		const version = sessionVersion;
+		statusCheck = (async () => {
+			const token = await SecureStorageAdapter.getItem("accessToken");
+			if (version !== sessionVersion) return;
+			if (!token) {
+				await get().chageStatus();
+				return;
+			}
+			try {
+				const resp = await authCheckStatus();
+				if (version === sessionVersion) await get().chageStatus(resp.accessToken, resp.user);
+			} catch (error) {
+				if (version !== sessionVersion) return;
+				if (axios.isAxiosError(error) && [401, 403].includes(error.response?.status ?? 0)) {
+					await get().chageStatus();
+				} else {
+					// Let visitors browse without erasing a session on a network failure.
+					useNotificationStore.getState().reset();
+					set({ status: "unauthenticated", user: undefined, accessToken: undefined });
+				}
+			}
+		})().finally(() => { statusCheck = undefined; });
+		return statusCheck;
 	},
 
 	logout: async () => {
+		sessionVersion++;
+		set({ status: "unauthenticated", accessToken: undefined, user: undefined });
 		// detener audio antes de limpiar auth
 		await useAudioPlayerStore.getState().clearStream();
 
 		//! Clear token del secure storage
-		SecureStorageAdapter.removeItem("accessToken");
+		await SecureStorageAdapter.removeItem("accessToken");
+		await get().clearLastRoute();
+		useNotificationStore.getState().reset();
 
 		set({ status: "unauthenticated", accessToken: undefined, user: undefined });
 		// Alert.alert( "Cierre de sesión sastifastorio" )
 		// ✅ Limpia cache cuando entra otro usuario
+		await queryClient.cancelQueries();
 		queryClient.clear();
 	},
 }));

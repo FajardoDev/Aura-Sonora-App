@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import type { ListeningSource } from '@/presentation/listening/listening-model';
+
+export interface PlaybackContext { source?: ListeningSource; resumePosition?: number }
 
 
 type PlayerType = 'radio' | 'podcast' | null;
@@ -12,13 +15,15 @@ interface AudioPlayerState {
     isPlaying: boolean;
     radioid: string | null
     volume: number; // Volumen (0 a 100)
+    listeningSource: ListeningSource | null;
+    resumeRequest: { position: number; sequence: number } | null;
     // isFavorite: boolean;
     type: PlayerType; //!MODIFIQUEE
     
 
-    setStream: ( streamUrl: string, radioName: string, radioimg: string, slug: string, episodeSlug: string,  radioid: string, 
+    setStream: ( streamUrl: string, radioName: string, radioimg: string, slug: string, radioid: string, episodeSlug: string,
         // isFavorite: boolean, 
-        type: PlayerType,  ) => void;
+        type: PlayerType, context?: PlaybackContext ) => void;
     // setIsFavorite: (isFavorite: boolean) => void; // <--- AGREGAR ESTO
     togglePlay: ( savedIsPlaying?: boolean ) => void;
     clearStream: () => void;
@@ -36,6 +41,8 @@ export const useAudioPlayerStore = create<AudioPlayerState>()(
         episodeSlug: null,
         radioid: null,
         isPlaying: false,
+        listeningSource: null,
+        resumeRequest: null,
         volume: 0.5, // Subido a 50 como valor inicial por defecto
         // isFavorite: false,
         type: null,
@@ -50,17 +57,24 @@ export const useAudioPlayerStore = create<AudioPlayerState>()(
             episodeSlug: string | null = null, // 👈 Valor por defecto null
             // isFavorite,
             type: PlayerType = 'radio',
+            context?: PlaybackContext,
         ) => {
 
             const { streamUrl } = get();
-            // Si la URL es la misma, solo regresamos, la reproducción se mantiene.
+            // Compartir URL no implica compartir la identidad de una emisora.
             if ( newStreamUrl === streamUrl ) {
+                // A shared stream URL still belongs to the station selected by its slug.
+                if (type === "radio") set({ radioName, radioimg, slug, radioid, episodeSlug, type, resumeRequest: null,
+                    listeningSource: context?.source || (get().slug === slug && get().type === type ? get().listeningSource : null), isPlaying: true });
+                if (context?.resumePosition !== undefined) set({ listeningSource: context.source || get().listeningSource, resumeRequest: { position: context.resumePosition, sequence: Date.now() }, isPlaying: true });
                 return;
             }
 
             // Si la URL cambia, actualizamos el estado e iniciamos la reproducción.
             set( {
                 streamUrl: newStreamUrl,
+                listeningSource: context?.source || null,
+                resumeRequest: context?.resumePosition !== undefined ? { position: context.resumePosition, sequence: Date.now() } : null,
                 radioName,
                 radioimg,
                 slug,
@@ -79,7 +93,7 @@ export const useAudioPlayerStore = create<AudioPlayerState>()(
         togglePlay: ( savedIsPlaying?: boolean ) =>
             set( ( state ) => ( { isPlaying: savedIsPlaying !== undefined ? savedIsPlaying : !state.isPlaying, } ) ),
 
-        clearStream: () => set( { streamUrl: null, radioName: null, radioimg: null, slug: null, isPlaying: false, 
+        clearStream: () => set( { listeningSource: null, resumeRequest: null, streamUrl: null, radioName: null, radioimg: null, slug: null, isPlaying: false,
             // isFavorite: false, 
             radioid: null, type: null, episodeSlug: null, 
 

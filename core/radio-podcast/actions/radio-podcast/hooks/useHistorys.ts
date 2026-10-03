@@ -1,3 +1,4 @@
+import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import { Datum, EntityType, HistoryQueryParameters, HistorysResponse, Podcast, RadioStation, Type } from "@/core/radio-podcast/interface/radio-podcast/historys.interface";
 import { InfiniteData, QueryKey, useInfiniteQuery } from "@tanstack/react-query";
 import { fetchHistorys } from "../actions/fetch-history.action";
@@ -90,6 +91,7 @@ const ITEMS_PER_PAGE = 21;
 type TransformedData = InfiniteData<FlatHistoryEntityPage[]>;
 
 export const useHistoryPage = ( entityType: EntityType ) => {
+    const authenticated = useAuthStore((state) => state.status === "authenticated");
 
     const HISTORY_KEY: QueryKey = ['historys', 'page', entityType];
 
@@ -103,6 +105,7 @@ export const useHistoryPage = ( entityType: EntityType ) => {
     >
         ( {
             queryKey: HISTORY_KEY,
+        enabled: authenticated,
             queryFn: ( { pageParam = 1 } ) => {
                 // Aseguramos que los parámetros se construyan correctamente
                 const params: HistoryQueryParameters = {

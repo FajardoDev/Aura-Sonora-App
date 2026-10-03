@@ -1,3 +1,4 @@
+import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import { HistoryResponse } from "@/core/radio-podcast/interface/radio-podcast/history.interface";
 import { QueryKey, useQuery, UseQueryResult } from "@tanstack/react-query";
 import { fetchHistory } from "../actions/fetch-history.action";
@@ -195,12 +196,14 @@ export const transformHistoryData = ( data: HistoryResponse ): FlatHistoryEntity
 };
 
 export const useHistory = () => {
+    const authenticated = useAuthStore((state) => state.status === "authenticated");
 
     const HISTORY_KEY: QueryKey = ['history', 'home'];
     
     // Usamos el 'select' para transformar HistoryResponse a FlatHistoryEntity[]
     const historyQuery: UseQueryResult<FlatHistoryEntity[]> = useQuery({
         queryKey: HISTORY_KEY,
+        enabled: authenticated,
         queryFn: fetchHistory,
         
         // ** SOLUCIÓN ANTI-FALLO: SELECTOR INTERNO **

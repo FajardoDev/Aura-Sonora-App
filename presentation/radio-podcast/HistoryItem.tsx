@@ -1,3 +1,4 @@
+import { RadioLogo, PodcastArtwork } from "@/presentation/listening/HomeMediaCards";
 import { API_URL } from "@/core/api/radioPodcastApi";
 import { FlatHistoryEntity } from "@/core/radio-podcast/actions/radio-podcast/hooks/useHistory";
 import { useToggleFavorite } from "@/core/radio-podcast/actions/radio-podcast/hooks/useToggleFavorite";
@@ -32,9 +33,10 @@ import ThemedText from "../theme/components/themed-text";
 
 interface HistoryItemProps {
   item: FlatHistoryEntity;
+  homeCard?: boolean;
 }
 
-export default function HistoryItem({ item }: HistoryItemProps) {
+export default function HistoryItem({ item, homeCard = false }: HistoryItemProps) {
   // Evitar multiples clic
   const router = useRouter();
   const pathname = usePathname();
@@ -166,6 +168,7 @@ export default function HistoryItem({ item }: HistoryItemProps) {
   return (
     <View
       style={{
+        width: homeCard ? 160 : undefined,
         // width: "30%", // Ajuste para 3 columnas
         margin: 5,
         // backgroundColor: "#fff",
@@ -186,7 +189,7 @@ export default function HistoryItem({ item }: HistoryItemProps) {
         onPress={handleClic}
         style={{ position: "relative" }}
       >
-        <Image
+        {homeCard ? (isRadio ? <RadioLogo uri={imageUrl} /> : <PodcastArtwork uri={imageUrl} />) : <Image
           source={
             item.image
               ? { uri: imageUrl, cache: "force-cache" }
@@ -210,7 +213,7 @@ export default function HistoryItem({ item }: HistoryItemProps) {
               : require("../../assets/images/radios.png")
           } // opcional
           priority="high" // alta prioridad de carga
-        />
+        />}
 
         {/* 🎧 Botón de play/pausa centrado */}
         {shouldShowButton && item.type === "radio" && (

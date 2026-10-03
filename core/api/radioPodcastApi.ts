@@ -52,7 +52,10 @@ radioPodcastApi.interceptors.response.use(
   (error) => {
     // eslint-disable-next-line import/no-named-as-default-member
     if (axios.isCancel(error)) {
-      console.log("🌐 Petición cancelada: offline");
+      // AbortSignal también cancela búsquedas anteriores; no implica falta de red.
+      if (error.message === "Sin conexión a Internet") {
+        console.log("🌐 Petición cancelada: offline");
+      }
     } else if (error.code === "ECONNABORTED") {
       Alert.alert(
         "Error",

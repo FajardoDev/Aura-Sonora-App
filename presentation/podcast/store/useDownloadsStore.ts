@@ -1,8 +1,10 @@
+import type { EpisodeListen } from "@/presentation/listening/listening-model";
 // store/useDownloadsStore.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 
 interface Download {
+    listeningSource?: EpisodeListen;
 	id: string;
 	title: string;
 	uri: string;

@@ -1,3 +1,4 @@
+import { mediaListContentStyle } from "@/presentation/listening/media-card-layout";
 import ThemedText from "@/presentation/theme/components/themed-text";
 import { ActivityIndicator, FlatList, View } from "react-native";
 import { useTopStation } from "../hooks/useTopStation";
@@ -36,8 +37,8 @@ export const TopStation = () => {
         numColumns={3}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <RadioGridItem emisora={item} />}
-        contentContainerStyle={{ paddingHorizontal: 1 }}
+        renderItem={({ item }) => <RadioGridItem emisora={item} showMetadata={false} />}
+        contentContainerStyle={mediaListContentStyle}
       />
     </View>
   );

@@ -2,13 +2,15 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "./global.css";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/core/query-client/queryClient";
 import { useFonts } from "expo-font";
 import { SplashScreen, useRootNavigationState, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import "react-native-gesture-handler";
 import "react-native-reanimated";
 
+import { useGuestHistorySync } from "@/presentation/listening/useGuestHistorySync";
 import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import {
   ThemeProviderCustom,
@@ -25,14 +27,6 @@ import {
 } from "react-native-safe-area-context";
 
 SplashScreen.preventAutoHideAsync();
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
 
 LogBox.ignoreAllLogs(false); // 👈 asegúrate de no estar ocultando warnings 🚫 Ignorar warnings de red
 
@@ -62,6 +56,7 @@ function RootLayoutContent() {
   // ✅ PRO: Ahora sí, este componente es hijo de QueryClientProvider
   // Los listeners de notificaciones se activarán correctamente
   usePushNotifications();
+  useGuestHistorySync();
 
   const insets = useSafeAreaInsets();
   // const backgroundColor = useThemeColor({}, "background");

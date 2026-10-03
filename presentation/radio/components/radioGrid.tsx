@@ -75,7 +75,7 @@ export const RadioGrid = ({
       numColumns={3}
       keyExtractor={(item) => item.id}
       renderItem={({ item, index }) => (
-        <RadioGridItem emisora={item} index={index} />
+        <RadioGridItem emisora={item} index={index} showLocationAndCategory={false} />
       )}
       // Al 80% de la screen empieza a cargar
       onEndReached={handleEndReached}

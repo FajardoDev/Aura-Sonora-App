@@ -5,14 +5,13 @@ import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import { ShareButton } from "@/presentation/components/ShareButton";
 import { useAudioPlayerStore } from "@/presentation/radio/store/useAudioPlayerStore";
 import ThemedText from "@/presentation/theme/components/themed-text";
-import { ThemedView } from "@/presentation/theme/components/themed-view";
 import { extractDirectAudioLink } from "@/utils/urlEpisodes";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import PodcastSectionList, { PodcastSectionLayout } from "./PodcastSectionList";
 import {
   ActivityIndicator,
-  Animated,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -21,29 +20,48 @@ import { useDownloadsStore } from "../store/useDownloadsStore";
 import { EpisodeDownloadButton } from "./EpisodeDownloadButton";
 import { getImageUrl } from "./PodcastGridItem";
 
-interface Props {
+interface Props extends PodcastSectionLayout {
   episodes: Episode[];
   isFetching: boolean;
   hasNextPage: boolean;
-  hasPreviousPage: boolean;
   highlightedEpisodeId?: string | null;
-  loadPreviousPage: () => void;
   loadNextPage: () => void;
+  error?: boolean;
+  onRetry?: () => void;
+}
+
+function episodeDescriptionText(description: string | null | undefined) {
+  const entities: Record<string, string> = {
+    amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  };
+  return (description || "")
+    .replace(/<\s*(script|style)\b[^>]*>[\s\S]*?<\/\s*\1\s*>/gi, "")
+    .replace(/<\s*br\s*\/?\s*>|<\/\s*(?:p|div|li|h[1-6])\s*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&(#x[\da-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (entity, code: string) => {
+      if (!code.startsWith("#")) return entities[code.toLowerCase()] || entity;
+      const value = code.toLowerCase().startsWith("#x")
+        ? parseInt(code.slice(2), 16)
+        : parseInt(code.slice(1), 10);
+      return value > 0 && value <= 0x10ffff ? String.fromCodePoint(value) : entity;
+    })
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n/g, "\n")
+    .trim();
 }
 
 export default function EpisodesList({
   episodes,
   hasNextPage,
-  hasPreviousPage,
   isFetching,
   highlightedEpisodeId,
+  header, navigation, active, bottomInset,
+  error, onRetry,
   loadNextPage,
-  loadPreviousPage,
 }: Props) {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const { getDownloadedEpisode } = useDownloadsStore();
 
@@ -126,7 +144,10 @@ export default function EpisodesList({
       ep.slug, // 👈 AQUÍ: Mandamos el slug del episodio al store
       // ep.isFavorite, // 👈 AQUÍ: Mandamos el slug del episodio al store
       // true, // 👈 AQUÍ: Mandamos el slug del episodio al store
-      "podcast" //!MODIFIQUEE
+      "podcast",
+      { source: { kind: "podcast", podcastId: ep.podcast.id, podcastSlug: ep.podcast.slug,
+        podcastTitle: ep.podcast.titleEncabezado, episodeId: ep.id, episodeSlug: ep.slug,
+        title: ep.episodeTitle, artwork: img || "", stream, remoteStream: remoteStream || undefined, categories: ep.podcast.categories || [] } }
     );
 
     if (user && status === "authenticated" && streamUrl !== stream) {
@@ -150,71 +171,32 @@ export default function EpisodesList({
     }
   }, [streamUrl]);
 
-  // Animations
-  const handleLoadNext = async () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0.3,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-    await loadNextPage();
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
+  const targetIndex = highlightedEpisodeId
+    ? episodes.findIndex(ep => ep.id === highlightedEpisodeId || ep.slug === highlightedEpisodeId) : -1;
 
-  const handleLoadPrevious = async (event: any) => {
-    event.stopPropagation();
-    // 💡 Hacemos un pequeño fade-out para que no sea abrupto
-    Animated.timing(fadeAnim, {
-      toValue: 0.3,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
-    await new Promise((r) => setTimeout(r, 400)); // leve pausa para UX
-    loadPreviousPage();
-
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  return (
-    <Animated.View style={{ opacity: fadeAnim }}>
-      <ThemedView className="mt-4 px-4">
-        <ThemedText className="text-lg font-semibold mb-3">
-          🎙️ Episodios
-        </ThemedText>
-
-        {/* 1. Filtramos para eliminar duplicados por título antes de mapear */}
-        {episodes
-          .filter((ep, index, self) => {
-            // Función para quitar tildes y dejar en minúsculas
-            const normalize = (text: string) =>
-              text
-                ?.toLowerCase()
-                .normalize("NFD") // Separa la letra de la tilde
-                .replace(/[\u0300-\u036f]/g, "") // Elimina la tilde
-                .trim();
-
-            const currentTitle = normalize(ep.episodeTitle);
-
-            return (
-              index ===
-              self.findIndex((t) => normalize(t.episodeTitle) === currentTitle)
-            );
-          })
-          .map((ep) => {
+  return <PodcastSectionList
+    header={header} navigation={navigation} active={active} bottomInset={bottomInset}
+    items={episodes} itemKey={ep => ep.id}
+    targetIndex={targetIndex} targetKey={highlightedEpisodeId || undefined}
+    intro={<ThemedText className="mx-4 mt-4 mb-3 text-lg font-semibold">Episodios</ThemedText>}
+    empty={<ThemedText className="mx-4 my-6 text-zinc-400">{isFetching ? "Cargando episodios…" : error ? "" : "Todavía no hay episodios."}</ThemedText>}
+    footer={<View className="px-4 py-4">
+      {error && <TouchableOpacity accessibilityRole="button" onPress={onRetry} className="py-3">
+        <ThemedText className="text-rose-500 text-center">No se pudieron cargar los episodios. Reintentar</ThemedText>
+      </TouchableOpacity>}
+      {isFetching ? <ActivityIndicator color="#f43f5e" /> : hasNextPage ?
+        <TouchableOpacity onPress={() => loadNextPage()} accessibilityRole="button"
+          className="bg-rose-500 rounded-xl py-3 items-center">
+          <ThemedText className="text-white font-semibold">Mostrar más episodios</ThemedText>
+        </TouchableOpacity> : null}
+    </View>}
+    renderItem={ep => {
             const stream = extractDirectAudioLink(ep.links);
             const isCurrent = streamUrl === stream;
             const isActive = activatedId === ep.id;
             const showAsPlaying = isCurrent && isPlaying;
-            const destacado = ep.id === highlightedEpisodeId;
+            const destacado = ep.id === highlightedEpisodeId || ep.slug === highlightedEpisodeId;
+            const description = episodeDescriptionText(ep.episodeDescription);
 
             // console.log({ ep }); // Solo para depuración
 
@@ -222,7 +204,7 @@ export default function EpisodesList({
               <View
                 key={ep.id}
                 // className="bg-black/50 dark:bg-white/5 rounded-3xl mb-4 p-4 border border-white/10 shadow-sm">
-                className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl mb-4 p-4"
+                className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl mx-4 mb-4 p-4"
                 style={{
                   elevation: 2,
                   shadowColor: "#000",
@@ -296,6 +278,10 @@ export default function EpisodesList({
                     {/* Botón de Descarga integrado en la fila de info */}
                     <View className="flex-row items-center mt-2">
                       <EpisodeDownloadButton
+                        listeningSource={{ kind: "podcast", podcastId: ep.podcast.id, podcastSlug: ep.podcast.slug,
+                          podcastTitle: ep.podcast.titleEncabezado, episodeId: ep.id, episodeSlug: ep.slug,
+                          title: ep.episodeTitle, artwork: getImageUrl(ep.image) || "", stream: stream || "",
+                          remoteStream: stream || undefined, categories: ep.podcast.categories || [] }}
                         urls={ep.links}
                         title={ep.episodeTitle}
                         episodeId={ep.id}
@@ -338,12 +324,12 @@ export default function EpisodesList({
 
                 {/* SECCIÓN INFERIOR: DESCRIPCIÓN */}
                 <View className="mt-4 pt-4 border-t border-zinc-50 dark:border-zinc-800">
-                  {ep.episodeDescription ? (
+                  {description ? (
                     <ThemedText
                       className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed"
                       numberOfLines={isTablet ? 3 : 2}
                     >
-                      {ep.episodeDescription}
+                      {description}
                     </ThemedText>
                   ) : (
                     <ThemedText
@@ -354,61 +340,9 @@ export default function EpisodesList({
                     </ThemedText>
                   )}
 
-                  <ThemedText
-                    className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed"
-                    numberOfLines={isTablet ? 3 : 2}
-                  >
-                    {ep.episodeDescription}
-                  </ThemedText>
                 </View>
               </View>
             );
-          })}
-
-        {/* 🔘 Botones de paginación */}
-        <View className="flex-row justify-between px-5 py-4 border-t border-gray-800">
-          {!isFetching && (
-            <TouchableOpacity
-              onPress={handleLoadPrevious}
-              disabled={!hasPreviousPage || isFetching}
-              className={`rounded-xl px-6 py-2 ${
-                hasPreviousPage ? "bg-[#f43f5e]" : "bg-zinc-900/40"
-              }`}
-            >
-              <ThemedText
-                className={`text-sm ${
-                  hasPreviousPage ? "text-white" : "text-gray-500"
-                }`}
-              >
-                Cargar menos
-              </ThemedText>
-            </TouchableOpacity>
-          )}
-
-          {isFetching && (
-            <View className="flex-col items-center justify-center text-center mx-auto">
-              <ActivityIndicator color="#f43f5e" />
-              <ThemedText className="animate-pulse">Episodios</ThemedText>
-            </View>
-          )}
-
-          {!isFetching && (
-            <TouchableOpacity
-              onPress={handleLoadNext}
-              disabled={!hasNextPage || isFetching}
-              className={`rounded-xl px-6 py-2 ${
-                hasNextPage ? "bg-[#f43f5e]" : "bg-zinc-900/40"
-              }`}
-            >
-              <ThemedText
-                className={`text-sm ${hasNextPage ? "text-white" : "text-gray-500"}`}
-              >
-                Cargar más
-              </ThemedText>
-            </TouchableOpacity>
-          )}
-        </View>
-      </ThemedView>
-    </Animated.View>
-  );
+    }}
+  />;
 }

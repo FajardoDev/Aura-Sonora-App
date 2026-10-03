@@ -8,11 +8,12 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 // };
 const ITEMS_PER_PAGE = 21;
 
-export const useRadioStation = (searchQuery: string = "") => {
+export const useRadioStation = (searchQuery: string = "", enabled = true) => {
 	const radioStationQuery = useInfiniteQuery({
 		queryKey: ["radioStations", "infinite", searchQuery], // searchQuery 👈 sin el término aquí
-		queryFn: ({ pageParam = 1 }) =>
-			fetchRadioStations(pageParam as number, ITEMS_PER_PAGE, searchQuery),
+		enabled,
+		queryFn: ({ pageParam = 1, signal }) =>
+			fetchRadioStations(pageParam as number, ITEMS_PER_PAGE, searchQuery, signal),
 		// enabled: searchQuery.trim() !== "", // 🚀 Solo busca si hay texto
 		// refetchOnWindowFocus: false, // ❌ No revalida al volver a la app
 		// refetchOnReconnect: false, // ❌ No revalida si se reconecta a la red

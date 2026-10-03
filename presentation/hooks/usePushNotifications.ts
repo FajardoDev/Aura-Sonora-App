@@ -1,4 +1,5 @@
 import { radioPodcastApi } from "@/core/api/radioPodcastApi";
+import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
@@ -89,6 +90,8 @@ export const usePushNotifications = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [token, setToken] = useState<string | undefined>(undefined);
+  const { status, user } = useAuthStore();
+  const userId = user?.id;
 
   // ✅ Traemos la acción de Zustand para refrescar datos
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
@@ -100,8 +103,6 @@ export const usePushNotifications = () => {
   const isColdStartHandled = useRef(false);
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then((t) => setToken(t));
-
     // ✅ CUANDO LLEGA: Si llega una notificación con la app abierta,
     // ejecutamos el fetch de Zustand para que el banner suba.
     notificationListener.current =
@@ -128,11 +129,22 @@ export const usePushNotifications = () => {
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    let active = true;
+    setToken(undefined);
+    if (status === "authenticated" && userId) {
+      registerForPushNotificationsAsync().then((value) => {
+        if (active) setToken(value);
+      }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [status, userId]);
+
+  useEffect(() => {
+    if (!token || status !== "authenticated" || !userId) return;
     radioPodcastApi
       .post("/notifications/register-token", { token, platform: Platform.OS })
       .catch((err) => console.error("❌ Error backend token:", err));
-  }, [token]);
+  }, [token, status, userId]);
 
   const handleAction = (data: any) => {
     if (!data) return;

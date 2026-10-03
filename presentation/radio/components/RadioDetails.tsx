@@ -1,116 +1,76 @@
+import type { Data } from "@/core/radio-podcast/interface/radio/radio-station-responce-by-slug.interface";
+import { ThemedCard } from "@/presentation/theme/components/ThemedCard";
 import ThemedText from "@/presentation/theme/components/themed-text";
-import { Link } from "expo-router";
-import { Pressable, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
+import { Linking, Pressable, View } from "react-native";
+import { stationPresentation } from "../utils/stationPresentation";
 
-interface Props {
-  radio: any;
-}
+export default function RadioDetails({ radio }: { radio: Data }) {
+  const details = stationPresentation(radio);
+  const [expanded, setExpanded] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const information = [
+    ["Frecuencia", details.frequency],
+    ["Ubicación", details.locations.join(" · ")],
+    ["País", details.country],
+    ["Categorías", details.categories.join(" · ")],
+    ["Idioma", details.language],
+  ].filter(([, value]) => value);
 
-export default function RadioDetails({ radio }: Props) {
+  const openContact = async (url: string) => {
+    setLinkError(null);
+    try { await Linking.openURL(url); }
+    catch { setLinkError("No se pudo abrir este contacto en tu dispositivo."); }
+  };
   return (
-    <View>
-      <ThemedText className="text-rose-500 mb-2 mt-3 font-Roboto-SemiBold">
-        🎵 En vivo ahora
-      </ThemedText>
-      <ThemedText className="text-sm mb-1 max-w-[50%]">
-        📍 {radio?.locations.join(", ")}
-      </ThemedText>
-      <View className="flex-row flex-wrap mt-2 font-Roboto-Medium">
-        {radio?.categories?.map((cat: string, index: number) => (
-          <Link key={index} href={`/radio-station/categoria/${cat}`} asChild>
-            <TouchableOpacity
-              className="dark:bg-white/10 bg-light-icon/5 rounded-full px-3 py-1 mr-2 mb-2 shadow-black shadow-2xl"
-              // style={({ pressed }) => ({
-              //   opacity: pressed ? 0.4 : 1,
-              // })}
-            >
-              <ThemedText className="text-xs font-medium">{cat}</ThemedText>
-            </TouchableOpacity>
-          </Link>
-        ))}
-      </View>
-      {/* <Text className="text-gray-300 text-sm mb-1  max-w-[50%]">
-				🎺 {radio?.categories.join(", ")}
-			</Text> */}
-
-      {/* 🔹 Sitio web */}
-      <Pressable onPress={() => console.log("Abrir web")}>
-        <View className="flex-row">
-          {radio?.contact_info?.website && (
-            <>
-              <ThemedText className="text-gray-300 text-sm mr-2 font-Roboto-SemiBold mt-2">
-                Sitio Web:
-              </ThemedText>
-              {radio?.contact_info?.website && (
-                <View className="flex gap-1 mt-1">
-                  <Link href={radio?.contact_info.website}>
-                    <ThemedText className="block text-blue-400">
-                      🌐 {radio?.contact_info.website}
-                    </ThemedText>
-                  </Link>
-                </View>
-              )}
-            </>
+    <View style={{ gap: 16 }}>
+      {!!details.description && (
+        <ThemedCard className="p-5 rounded-3xl border border-black/5 dark:border-white/10">
+          <ThemedText className="text-lg font-Roboto-Bold mb-3">Sobre la emisora</ThemedText>
+          <ThemedText className="text-sm leading-6 opacity-80" numberOfLines={expanded || details.description.length <= 280 ? undefined : 6}>
+            {details.description}
+          </ThemedText>
+          {details.description.length > 280 && (
+            <Pressable onPress={() => setExpanded(!expanded)} accessibilityRole="button" accessibilityState={{ expanded }} className="pt-3 py-2">
+              <ThemedText className="text-rose-500 font-Roboto-SemiBold">{expanded ? "Ver menos" : "Leer más"}</ThemedText>
+            </Pressable>
           )}
-        </View>
-      </Pressable>
-
-      {/* Descripción */}
-      <ThemedText className="text-sm leading-6 mt-3">
-        {radio?.description}
-      </ThemedText>
-
-      <View>
-        {(radio?.contact_info?.facebook ||
-          radio?.contact_info?.twitter ||
-          radio?.contact_info?.phone ||
-          radio?.contact_info?.email) && (
-          <View className="">
-            <View className="">
-              <ThemedText className="mt-2 mb-1 text-xl">Contactos</ThemedText>
-
-              {radio?.contact_info?.facebook && (
-                <View className="flex gap-1 ">
-                  <Pressable>
-                    <ThemedText className="block">
-                      {radio?.contact_info.facebook}
-                    </ThemedText>
-                  </Pressable>
-                </View>
-              )}
-
-              {radio?.contact_info?.twitter && (
-                <View className="flex gap-1">
-                  <Pressable>
-                    <ThemedText className="block text-blue-400">
-                      {radio?.contact_info.twitter}
-                    </ThemedText>
-                  </Pressable>
-                </View>
-              )}
+        </ThemedCard>
+      )}
+      {information.length > 0 && (
+        <ThemedCard className="p-5 rounded-3xl border border-black/5 dark:border-white/10">
+          <ThemedText className="text-lg font-Roboto-Bold mb-2">Información</ThemedText>
+          {information.map(([label, value]) => (
+            <View key={label} className="py-3 border-b border-black/5 dark:border-white/5">
+              <ThemedText className="text-xs opacity-60 mb-1">{label}</ThemedText>
+              <ThemedText className="text-sm leading-5">{value}</ThemedText>
             </View>
-          </View>
-        )}
-
-        {(radio?.contact_info?.phone || radio?.contact_info?.email) && (
-          <View>
-            {/* <Text className="mt-2 mb-1 text-xl text-slate-300">Contactos</Text> */}
-            <View>
-              {radio?.contact_info?.phone && (
-                <ThemedText className="block text-blue-400 ">
-                  {radio?.contact_info.phone}
-                </ThemedText>
-              )}
-
-              {radio?.contact_info?.email && (
-                <ThemedText className="block text-blue-400 ">
-                  {radio?.contact_info.email}
-                </ThemedText>
-              )}
-            </View>
-          </View>
-        )}
-      </View>
+          ))}
+        </ThemedCard>
+      )}
+      {(details.contacts.length > 0 || details.address) && (
+        <ThemedCard className="p-5 rounded-3xl border border-black/5 dark:border-white/10">
+          <ThemedText className="text-lg font-Roboto-Bold mb-2">Contacto</ThemedText>
+          {details.contacts.map(contact => (
+            <Pressable key={contact.label} onPress={contact.url ? () => openContact(contact.url!) : undefined}
+              disabled={!contact.url} accessibilityRole={contact.url ? "link" : undefined}
+              accessibilityLabel={`${contact.label}: ${contact.value}`}
+              className="flex-row items-center py-3 border-b border-black/5 dark:border-white/5 active:opacity-60">
+              <View className="bg-rose-500/10 p-3 rounded-2xl mr-3">
+                <Ionicons name={contact.icon} color="#f43f5e" size={21} />
+              </View>
+              <View className="flex-1">
+                <ThemedText className="text-xs opacity-60 mb-1">{contact.label}</ThemedText>
+                <ThemedText className="text-sm leading-5" style={{ flexShrink: 1 }}>{contact.value}</ThemedText>
+              </View>
+              {contact.url && <Ionicons name="open-outline" color="#f43f5e" size={18} style={{ marginLeft: 8 }} />}
+            </Pressable>
+          ))}
+          {!!details.address && <View className="pt-4"><ThemedText className="text-xs opacity-60 mb-1">Dirección</ThemedText><ThemedText className="text-sm leading-5">{details.address}</ThemedText></View>}
+          {linkError && <ThemedText accessibilityRole="alert" className="text-sm text-rose-500 mt-3">{linkError}</ThemedText>}
+        </ThemedCard>
+      )}
     </View>
   );
 }

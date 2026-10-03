@@ -48,26 +48,11 @@ export default function TabsLayout() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { status, checkStatus } = useAuthStore();
+  const { status } = useAuthStore();
 
   useEffect(() => {
     useDownloadsStore.getState().loadDownloads();
   }, []);
-
-  useEffect(() => {
-    checkStatus();
-  }, []);
-
-  // 👇 esto evita que el redireccionamiento ocurra durante el render
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/auth/login");
-    }
-  }, [status]);
-
-  if (status === "unauthenticated") {
-    return null; // evita que renderice mientras redirige
-  }
 
   if (status === "cheking") {
     return (

@@ -1,3 +1,6 @@
+import { useListeningStore } from "@/presentation/listening/useListeningStore";
+import { scopeForUser } from "@/presentation/listening/listening-model";
+import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import { useNetworkStatus } from "@/presentation/hooks/useNetworkStatus";
 import { useDownloadsStore } from "@/presentation/podcast/store/useDownloadsStore";
 import { useAudioPlayerStore } from "@/presentation/radio/store/useAudioPlayerStore";
@@ -84,15 +87,19 @@ export default function DownloadedEpisodesList() {
       return;
     }
 
+    const auth = useAuthStore.getState();
+    const scope = scopeForUser(auth.status === "authenticated" ? auth.user?.id : undefined);
+    const source = item.listeningSource || useListeningStore.getState().profiles[scope]?.episodes.find(e => e.episodeId === item.id);
     setStream(
       item.uri, // local file://...
       item.title,
       img!,
-      item.podcastTitle || "Podcast",
-      item.podcastId || "",
-      item.slug || "",
+      source?.podcastSlug || item.podcastTitle || "Podcast",
+      source?.podcastId || item.podcastId || "",
+      source?.episodeSlug || item.slug || "",
       // item.isFavorite || "",
-      "podcast" // 👈 tu tipo ya existente
+      "podcast",
+      source ? { source } : undefined
     );
 
     setActivatedId(item.id);

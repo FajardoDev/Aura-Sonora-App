@@ -9,7 +9,7 @@ export interface AuthResponse {
 	roles: string[];
 	image?: string | null;
 	accessToken: string;
-	// refreshToken: string;
+	refreshToken?: string;
 }
 
 const returnUserToken = (
@@ -18,7 +18,7 @@ const returnUserToken = (
 	user: User;
 	accessToken: string;
 } => {
-	const { accessToken, ...user } = data; // const user: User = {id,email,fullName,isActive,roles};
+	const { accessToken, refreshToken: _refreshToken, ...user } = data;
 	return { user, accessToken };
 };
 
@@ -33,7 +33,6 @@ export const authLogin = async (email: string, password: string) => {
 
 		return returnUserToken(data);
 	} catch (error) {
-		console.log(error);
 		// throw new Error('User and/or password not valid');
 		return null;
 	}
@@ -47,8 +46,7 @@ export const authCheckStatus = async () => {
 
 		return returnUserToken(data);
 	} catch (error) {
-		console.log(error);
-		return null;
+		throw error;
 	}
 };
 
@@ -69,9 +67,7 @@ export const register = async (
 
 		return returnUserToken(data);
 	} catch (error) {
-		console.log(error, "No se pudo crear el usuario");
 		return null;
 	}
 };
-
 

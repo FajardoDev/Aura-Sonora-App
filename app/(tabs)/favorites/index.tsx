@@ -1,3 +1,4 @@
+import RequireAuth from "@/presentation/auth/components/RequireAuth";
 import { useFetchFavorites } from "@/core/radio-podcast/hooks/useFetchFavorites";
 import { EntityType } from "@/core/radio-podcast/interface/radio/radio-station-responce.interface";
 import { PlayerBackground } from "@/presentation/components/PlayerBackground";
@@ -20,7 +21,7 @@ import {
   View,
 } from "react-native";
 
-export default function TabsFavoritesScreen() {
+function TabsFavoritesScreen() {
   // 1. Estado para el filtro (Radio o Podcast)
   const [selectedType, setSelectedType] = useState<EntityType>("radio");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -290,3 +291,7 @@ const styles = StyleSheet.create({
     marginHorizontal: "auto",
   },
 });
+
+export default function ProtectedScreen() {
+  return <RequireAuth><TabsFavoritesScreen /></RequireAuth>;
+}

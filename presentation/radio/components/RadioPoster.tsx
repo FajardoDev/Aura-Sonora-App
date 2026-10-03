@@ -1,3 +1,4 @@
+import { useAuthNavigation } from "@/presentation/auth/hooks/useAuthNavigation";
 import {
   EntityType,
   Station,
@@ -43,6 +44,7 @@ export default function RadioPoster({
   // 1. Inicializar el hook de mutación
   const { mutate, isPending } = useToggleFavorite();
 
+  const { requireAuth } = useAuthNavigation();
   const router = useRouter();
   const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -51,6 +53,7 @@ export default function RadioPoster({
 
   //! 📍
   const handleToggleFavorite = () => {
+    if (!requireAuth()) return;
     if (!emisora || isPending) return;
     const payload = {
       type: "radio" as EntityType,

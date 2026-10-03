@@ -4,31 +4,30 @@ import { useTheme } from "@/presentation/context/ThemeChangerContext";
 import { useGlobalSearch } from "@/presentation/hooks/useGlobalSearch";
 import { useNetworkStatus } from "@/presentation/hooks/useNetworkStatus";
 import DownloadedEpisodesList from "@/presentation/podcast/components/DownloadedEpisodesList";
-import GridPodcast from "@/presentation/podcast/components/GridPodcast";
+import { buildSearchRows, GlobalSearchResultRow, SearchRow } from "@/presentation/components/GlobalSearchResults";
 import { useDownloadsStore } from "@/presentation/podcast/store/useDownloadsStore";
 import HomeHistorySection from "@/presentation/radio-podcast/HomeHistorySection";
-import { RadioGrid } from "@/presentation/radio/components/radioGrid";
 import { useAudioPlayerStore } from "@/presentation/radio/store/useAudioPlayerStore";
 import ThemedText from "@/presentation/theme/components/themed-text";
 import ThemeTextInput from "@/presentation/theme/components/ThemeTextInput";
 import { Ionicons } from "@expo/vector-icons";
 import NetInfo from "@react-native-community/netinfo";
 import { Image } from "expo-image";
-import { Stack, useFocusEffect, useNavigation } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { UserAvatar } from "@/presentation/components/UserAvatar";
+import { Stack, useNavigation } from "expo-router";
 // import { useColorScheme } from "nativewind";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Button,
   FlatList,
-  Keyboard,
   TouchableOpacity,
   View,
 } from "react-native";
 import {
   SafeAreaView,
-  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 /* =====================================================
@@ -38,7 +37,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const { isConnected } = useNetworkStatus();
   const { downloads } = useDownloadsStore();
-  const { streamUrl } = useAudioPlayerStore();
+  const streamUrl = useAudioPlayerStore(state => state.streamUrl);
   const { user } = useAuthStore();
 
   // const { colorScheme } = useColorScheme();
@@ -47,7 +46,6 @@ export default function HomeScreen() {
   const { resolvedTheme, bgColor } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  const insets = useSafeAreaInsets();
 
   /* ==========================
      SEARCH STATE
@@ -55,10 +53,10 @@ export default function HomeScreen() {
   const [inputValue, setInputValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const isSearching = debouncedSearch.trim().length > 0;
+  const isSearching = inputValue.trim().length > 0;
+  const isDebouncing = inputValue.trim() !== debouncedSearch;
 
-  const { radios, podcasts, isLoading, refetchAll } =
-    useGlobalSearch(debouncedSearch);
+  const search = useGlobalSearch(debouncedSearch);
 
   /* ==========================
      DEBOUNCE
@@ -71,42 +69,36 @@ export default function HomeScreen() {
     return () => clearTimeout(timeout);
   }, [inputValue]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (isSearching) refetchAll();
-    }, [isSearching, refetchAll])
-  );
-
   /* ==========================
      HEADER LEFT (USER)
   ========================== */
   useEffect(() => {
-    const avatar = user?.images
-      ? { uri: user.images }
-      : require("../../../assets/images/user.png");
-
     navigation.setOptions({
       headerLeft: () => (
         <View className="flex-row items-center ml-4 py-2">
-          <View className="border-2 border-rose-500 rounded-full p-[1px]">
-            <Image
-              source={avatar}
-              style={{ width: 38, height: 38, borderRadius: 19 }}
-            />
-          </View>
+          <LinearGradient
+            colors={["#f43f5e", "#a855f7", "#00BFFF"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ width: 44, height: 44, borderRadius: 22, padding: 2 }}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 20, padding: 1, backgroundColor: bgColor }}>
+              <UserAvatar user={user} size={38} />
+            </View>
+          </LinearGradient>
 
           <View className="ml-3">
             <ThemedText className="text-[10px] uppercase opacity-60 font-bold">
               ¡Un gusto escucharte!
             </ThemedText>
             <ThemedText className="text-sm font-bold">
-              Hola, {user?.fullName || "Usuario"}
+              Hola, {user?.fullName || "Invitado"}
             </ThemedText>
           </View>
         </View>
       ),
     });
-  }, [user, navigation]);
+  }, [user, navigation, bgColor]);
 
   /* ==========================
      NETWORK STATES
@@ -153,10 +145,10 @@ export default function HomeScreen() {
   /* ==========================
      FLATLIST DATA
   ========================== */
-  const data = useMemo(
-    () => [{ key: isSearching ? "search" : "home" }],
-    [isSearching]
-  );
+  type HomeRow = SearchRow | { key: string; kind: "home" };
+  const data: HomeRow[] = isSearching && !isOfflineWithDownloads
+    ? buildSearchRows(search, isDebouncing)
+    : [{ key: "home", kind: "home" }];
 
   /* ==========================
      RENDER
@@ -188,25 +180,22 @@ export default function HomeScreen() {
           data={data}
           keyExtractor={(item) => item.key}
           stickyHeaderIndices={[0]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 10 }}
+          contentContainerStyle={{ paddingBottom: isSearching ? (streamUrl ? 300 : 110) : 10 }}
           ListHeaderComponent={
             <SearchHeader
               value={inputValue}
               isDark={isDark}
               onChange={setInputValue}
               onClear={() => {
-                Keyboard.dismiss(); // 1. Cierra el teclado de inmediato (libera hilos de la UI)
-                setInputValue(""); // 2. Limpia el input visual
-                setDebouncedSearch(""); // 3. Limpia la búsqueda
+                setInputValue("");
+                setDebouncedSearch("");
               }}
-              // onClear={() => {
-              //   setInputValue("");
-              //   setDebouncedSearch("");
-              // }}
             />
           }
-          renderItem={() => {
+          renderItem={({ item }) => {
             if (isOfflineWithDownloads) {
               return (
                 <View className={`px-3 ${streamUrl ? "mb-60" : "mb-40"}`}>
@@ -218,15 +207,9 @@ export default function HomeScreen() {
               );
             }
 
-            if (isSearching) {
-              return (
-                <SearchResults
-                  radios={radios}
-                  podcasts={podcasts}
-                  loading={isLoading}
-                  query={debouncedSearch}
-                />
-              );
+            if (item.kind !== "home") {
+              return <GlobalSearchResultRow row={item} query={debouncedSearch}
+                onRetry={media => { void (media === "radio" ? search.radioStationQuery.refetch() : search.podcastQuery.refetch()); }} />;
             }
 
             return <HomeHistorySection />;
@@ -249,7 +232,8 @@ function SearchHeader({ value, onChange, onClear, isDark }: any) {
         {/* <PlayerBackground style={{ position: "absolute", inset: 0 }} /> */}
 
         {/* Contenedor relativo del buscador */}
-        <View className="mx-4 relative pt-24">
+        <View className="mx-4 pt-24">
+          <View style={{ position: "relative", height: 48, marginBottom: 14 }}>
           <ThemeTextInput
             placeholder="Buscar radios & podcasts..."
             icon="search-outline"
@@ -257,6 +241,7 @@ function SearchHeader({ value, onChange, onClear, isDark }: any) {
             onChangeText={onChange}
             style={{
               height: 48,
+              marginBottom: 0,
               paddingLeft: 42, // espacio para icono search
               paddingRight: 45, // espacio para el ❌
               // paddingRight: 42, // espacio para el ❌
@@ -275,17 +260,19 @@ function SearchHeader({ value, onChange, onClear, isDark }: any) {
           {/* ❌ Limpiar búsqueda (alineado perfectamente) */}
           {value.length > 0 && (
             <TouchableOpacity
-              // 1. Aumentamos el área táctil (aunque el icono sea pequeño)
               hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               onPress={onClear}
+              accessibilityRole="button"
+              accessibilityLabel="Borrar búsqueda"
               style={{
                 position: "absolute",
-                // right: 14,
                 right: 12,
-                // top: 24 + 48 / 2 + 12, // pt-24 + (mitad del height) + ajuste manual
-                top: "190%",
+                top: 0,
+                bottom: 0,
+                width: 40,
+                justifyContent: "center",
+                alignItems: "center",
                 zIndex: 100,
-                transform: [{ translateY: -10 }],
               }}
             >
               <Ionicons
@@ -295,60 +282,10 @@ function SearchHeader({ value, onChange, onClear, isDark }: any) {
               />
             </TouchableOpacity>
           )}
+          </View>
         </View>
       </View>
     </PlayerBackground>
-  );
-}
-
-function SearchResults({ radios, podcasts, loading, query }: any) {
-  if (loading) {
-    return (
-      <Centered>
-        <ActivityIndicator color="#f43f5e" />
-        <ThemedText>Buscando contenido…</ThemedText>
-      </Centered>
-    );
-  }
-
-  if (!radios.length && !podcasts.length) {
-    return (
-      <Centered>
-        <ThemedText>No se encontraron resultados para “{query}”</ThemedText>
-      </Centered>
-    );
-  }
-
-  return (
-    <View className="pb-8">
-      {radios.length > 0 && (
-        <>
-          <ThemedText className="text-xl font-bold mx-3 mt-4">
-            Radios
-          </ThemedText>
-          <RadioGrid
-            emisoras={radios}
-            loadNextPage={() => {}}
-            hasNextPage={false}
-            isSearching={false}
-          />
-        </>
-      )}
-
-      {podcasts.length > 0 && (
-        <>
-          <ThemedText className="text-xl font-bold mx-3 mt-4">
-            Podcasts
-          </ThemedText>
-          <GridPodcast
-            podcasts={podcasts}
-            loadNextPage={() => {}}
-            hasNextPage={false}
-            isSearching={false}
-          />
-        </>
-      )}
-    </View>
   );
 }
 

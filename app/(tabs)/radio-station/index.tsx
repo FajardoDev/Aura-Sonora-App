@@ -29,7 +29,14 @@ export default function RadioScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState(inputValue);
   const router = useRouter();
 
-  const { slug } = useLocalSearchParams();
+  const { slug, search } = useLocalSearchParams<{ slug?: string; search?: string }>();
+
+  useEffect(() => {
+    if (typeof search === "string") {
+      setInputValue(search);
+      setDebouncedSearch(search);
+    }
+  }, [search]);
 
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";

@@ -1,3 +1,4 @@
+import { useAuthNavigation } from "@/presentation/auth/hooks/useAuthNavigation";
 import { EntityType } from "@/core/radio-podcast/interface/radio/radio-station-responce.interface";
 // import ThemedText from "@/presentation/theme/components/themed-text";
 import { Ionicons } from "@expo/vector-icons";
@@ -35,12 +36,14 @@ export default function PodcastPoster({
   const { mutate, isPending } = useToggleFavorite();
 
   // Evitar multiples clic
+  const { requireAuth } = useAuthNavigation();
   const router = useRouter();
   const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
 
   //! 📍
   const handleToggleFavorite = () => {
+    if (!requireAuth()) return;
     if (!podcasts || isPending) return;
     const payload = {
       type: "podcast" as EntityType,

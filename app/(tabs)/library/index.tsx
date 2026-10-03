@@ -1,3 +1,5 @@
+import { UserAvatar } from "@/presentation/components/UserAvatar";
+import { useAuthNavigation } from "@/presentation/auth/hooks/useAuthNavigation";
 import { Colors } from "@/constants/theme";
 import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import { useNotificationStore } from "@/presentation/radio-podcast/stores/notifications.store";
@@ -50,19 +52,15 @@ const OptionRow = ({ icon, label, onPress, iconType }: OptionRowProps) => {
 export const LibraryScreen = ({ navigation }: any) => {
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const { status, requestLogin } = useAuthNavigation();
 
   const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   const background = useThemeColor({}, "background");
 
-  const userName = user?.fullName || "Usuario";
-  const avatarLetter = userName.charAt(0).toUpperCase();
-
-  // Simulación de los datos del usuario (lo reemplazarás con datos reales)
   const userData = {
-    name: user?.fullName,
+    name: user?.fullName || "Invitado",
     email: user?.email,
-    initials: avatarLetter, // O puedes usar una URL de imagen para el avatar
   };
 
   return (
@@ -72,7 +70,7 @@ export const LibraryScreen = ({ navigation }: any) => {
       {/* Sección de Datos del Usuario */}
       <View style={styles.userInfoContainer}>
         <View style={styles.avatar}>
-          <ThemedText style={styles.avatarText}>{userData.initials}</ThemedText>
+          <UserAvatar user={user} size={56} fontSize={24} />
         </View>
         <View>
           <ThemedText style={styles.userName}>{userData.name}</ThemedText>
@@ -106,7 +104,7 @@ export const LibraryScreen = ({ navigation }: any) => {
             // iconType="Feather"
           />
 
-          {unreadCount > 0 && (
+          {status === "authenticated" && unreadCount > 0 && (
             <View style={styles.badgeFloating}>
               <ThemedText style={styles.badgeText}>
                 {unreadCount > 99 ? "99+" : unreadCount}
@@ -154,8 +152,8 @@ export const LibraryScreen = ({ navigation }: any) => {
 
         <OptionRow
           icon="log-out-outline"
-          label="Cerrar Sesión"
-          onPress={() => logout()}
+          label={status === "authenticated" ? "Cerrar Sesión" : "Iniciar sesión"}
+          onPress={() => status === "authenticated" ? logout() : requestLogin("/library")}
           iconType="Ionicons"
         />
       </ScrollView>
@@ -196,11 +194,6 @@ const styles = StyleSheet.create({
     marginRight: 15,
     borderWidth: 2,
     borderColor: "#00BFFF", // Borde de acento (ej. Azul brillante)
-  },
-  avatarText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    // color: "#FFFFFF",
   },
   userName: {
     fontSize: 18,

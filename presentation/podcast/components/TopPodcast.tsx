@@ -1,3 +1,4 @@
+import { mediaListContentStyle } from "@/presentation/listening/media-card-layout";
 //  ERROR  VirtualizedLists should never be nested inside plain ScrollViews with the same orientation because it can break windowing and other functionality - use another VirtualizedList-backed container instead.
 
 import ThemedText from "@/presentation/theme/components/themed-text";
@@ -37,7 +38,7 @@ export const TopPodcast = () => {
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => <PodcastGridItem podcast={item} />}
-        contentContainerStyle={{ paddingHorizontal: 1 }}
+        contentContainerStyle={mediaListContentStyle}
       />
     </View>
   );

@@ -1,3 +1,4 @@
+import { getAuthReturnRoute } from "@/presentation/auth/hooks/useAuthNavigation";
 import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import ThemedText from "@/presentation/theme/components/themed-text";
 import ThemedButton from "@/presentation/theme/components/ThemedButton";
@@ -17,7 +18,7 @@ import {
 } from "react-native";
 
 export default function RegisterScreen() {
-  const { register } = useAuthStore();
+  const { register, getLastRoute, clearLastRoute } = useAuthStore();
 
   const { height } = useWindowDimensions();
   const backgroundColor = useThemeColor({}, "background");
@@ -33,7 +34,6 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     const { fullName, email, password } = form;
 
-    console.log({ fullName, email, password });
 
     if (fullName.length === 0 || email.length === 0 || password.length === 0) {
       return Alert.alert("Error", "Los campos son obligatorios");
@@ -44,7 +44,10 @@ export default function RegisterScreen() {
     setIsPosting(false);
 
     if (wasSuccessful) {
-      router.replace("/home");
+      const destination = getAuthReturnRoute(await getLastRoute());
+      await clearLastRoute();
+      // Return to the mounted tabs/player instead of creating another instance.
+      router.dismissTo(destination as import("expo-router").Href);
       return;
     }
 

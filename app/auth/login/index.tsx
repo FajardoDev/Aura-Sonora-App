@@ -1,3 +1,4 @@
+import { getAuthReturnRoute } from "@/presentation/auth/hooks/useAuthNavigation";
 import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import ThemedText from "@/presentation/theme/components/themed-text";
 import ThemedButton from "@/presentation/theme/components/ThemedButton";
@@ -152,7 +153,7 @@ import {
 export default function LoginScreen() {
   // useWarmUpBrowser();
 
-  const { login, chageStatus } = useAuthStore();
+  const { login, getLastRoute, clearLastRoute } = useAuthStore();
   // const { signIn, isLoaded } = useSignIn(); // Clerk login
   const [isPosting, setIsPosting] = useState(false);
 
@@ -167,7 +168,6 @@ export default function LoginScreen() {
   const onLogin = async () => {
     const { email, password } = form;
 
-    console.log({ email, password });
 
     if (email.length === 0 || password.length === 0) {
       // return; // ó mostrar alertas
@@ -187,7 +187,10 @@ export default function LoginScreen() {
     // }
 
     if (wasSuccessful) {
-      router.replace("/home");
+      const destination = getAuthReturnRoute(await getLastRoute());
+      await clearLastRoute();
+      // Return to the mounted tabs/player instead of creating another instance.
+      router.dismissTo(destination as import("expo-router").Href);
       return;
     }
 
@@ -273,7 +276,7 @@ export default function LoginScreen() {
         <View style={{ paddingTop: height * 0.2 }}>
           <ThemedText type="h1">Ingresar</ThemedText>
           <ThemedText type="normal" className="mb-8 mt-4">
-            Por favor ingrese para continuar
+            Inicia sesión para guardar favoritos y acceder a tus datos personales.
           </ThemedText>
         </View>
 

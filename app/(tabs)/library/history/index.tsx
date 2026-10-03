@@ -1,3 +1,4 @@
+import RequireAuth from "@/presentation/auth/components/RequireAuth";
 import { useHistoryPage } from "@/core/radio-podcast/actions/radio-podcast/hooks/useHistorys";
 
 import { EntityType } from "@/core/radio-podcast/interface/radio/radio-station-responce.interface";
@@ -22,7 +23,7 @@ import {
   View,
 } from "react-native";
 
-export default function TabsHistoryScreem() {
+function TabsHistoryScreem() {
   const [selectedType, setSelectedType] = useState<EntityType>("radio");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient(); // Necesario para la invalidación
@@ -290,3 +291,7 @@ const styles = StyleSheet.create({
     marginHorizontal: "auto",
   },
 });
+
+export default function ProtectedScreen() {
+  return <RequireAuth><TabsHistoryScreem /></RequireAuth>;
+}

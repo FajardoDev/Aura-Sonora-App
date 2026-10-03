@@ -1,3 +1,6 @@
+import { formatTime } from "@/utils/formatTime";
+import { mediaCardStyles, useMediaCardWidth } from "@/presentation/listening/media-card-layout";
+import { useAuthNavigation } from "@/presentation/auth/hooks/useAuthNavigation";
 import { API_URL } from "@/core/api/radioPodcastApi";
 import { useToggleFavorite } from "@/core/radio-podcast/actions/radio-podcast/hooks/useToggleFavorite";
 import {
@@ -10,12 +13,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
-import { TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, useWindowDimensions, View } from "react-native";
+
+export type PodcastCardData = Pick<Podcasts, "id" | "slug" | "titleEncabezado" | "image"> &
+  Partial<Pick<Podcasts, "titleSecond" | "isFavorite" | "commentsCount" | "averageRating">>;
 
 interface Props {
-  podcast: Podcasts;
+  podcast: PodcastCardData;
+  variant?: "grid" | "compact";
   index?: number;
-  // fullWidth?: boolean;
+  onPress?: () => void;
+  continuation?: { podcastTitle: string; position: number; duration: number; onContinue: () => void };
+  fullWidth?: boolean;
 }
 
 export const getImageUrl = (path?: string) => {
@@ -38,17 +47,21 @@ export const getImageUrl = (path?: string) => {
   return `${base}${safePath}`;
 };
 
-export default function PodcastGridItem({ podcast, index }: Props) {
+export default function PodcastGridItem({ podcast, index, variant = "grid", onPress, continuation, fullWidth = false }: Props) {
+  const cardWidth = useMediaCardWidth(variant);
+  const { width: screenWidth } = useWindowDimensions();
   // 1. Inicializar el hook de mutación
   const { mutate, isPending } = useToggleFavorite();
 
   // Evitar multiples clic
+  const { requireAuth } = useAuthNavigation();
   const router = useRouter();
   const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
 
   // 2. Función para construir el payload y llamar a la mutación
   const handleToggleFavorite = () => {
+    if (!requireAuth()) return;
     const payload = {
       type: "podcast" as EntityType,
       podcastId: podcast.id,
@@ -85,26 +98,43 @@ export default function PodcastGridItem({ podcast, index }: Props) {
     setTimeout(() => setIsNavigating(false), 1000);
   };
 
+  if (continuation) {
+    const progress = continuation.duration > 0
+      ? Math.min(1, Math.max(0, continuation.position / continuation.duration)) : 0;
+    return <TouchableOpacity activeOpacity={0.9} onPress={continuation.onContinue}
+      accessibilityRole="button" accessibilityLabel={`Continuar ${podcast.titleEncabezado}, de ${continuation.podcastTitle}`}
+      style={[mediaCardStyles.card, resumeStyles.card, { width: Math.min(screenWidth - 32, 400) }]}>
+      <Image source={podcast.image ? { uri } : require("../../../assets/images/podcasts.png")}
+        style={resumeStyles.artwork} contentFit="cover" transition={200} />
+      <View style={resumeStyles.content}>
+        <ThemedText numberOfLines={1} className="text-zinc-400 text-[10px] font-Roboto-SemiBold">{continuation.podcastTitle}</ThemedText>
+        <ThemedText numberOfLines={2} className="text-white text-[13px] font-Roboto-ExtraBold mt-1">{podcast.titleEncabezado}</ThemedText>
+        <View style={resumeStyles.footer}>
+          <View style={resumeStyles.progressContent}>
+            <View style={resumeStyles.track} accessibilityRole="progressbar"
+              accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}>
+              <View style={[resumeStyles.progress, { width: `${progress * 100}%` }]} />
+            </View>
+            <ThemedText numberOfLines={1} className="text-zinc-400 text-[10px] mt-1">{continuation.duration > 0
+              ? `${formatTime(Math.max(0, continuation.duration - continuation.position))} restantes`
+              : `${formatTime(continuation.position)} escuchados`}</ThemedText>
+          </View>
+          <View style={resumeStyles.play}>
+            <Ionicons name="play" size={18} color="#fff" />
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>;
+  }
+
   return (
     <View
-      style={{
-        width: "30%",
-        margin: 5,
-        // backgroundColor: "#fff",
-        backgroundColor: "#011016",
-        borderRadius: 12,
-        shadowColor: "#000",
-        boxShadow: "2px 2px 5px #011016",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        elevation: 3,
-      }}
+      style={[mediaCardStyles.card, { width: fullWidth ? "auto" : cardWidth }]}
     >
       {/* Contenedor de imagen */}
       <TouchableOpacity
         activeOpacity={0.9}
-        onPress={handlesClic}
+        onPress={onPress || handlesClic}
         style={{ position: "relative" }}
       >
         <Image
@@ -113,19 +143,7 @@ export default function PodcastGridItem({ podcast, index }: Props) {
               ? { uri, cache: "force-cache" }
               : require("../../../assets/images/radio-studio.jpg")
           }
-          style={{
-            width: "100%",
-            height: 120,
-            borderTopRightRadius: 10,
-            borderTopLeftRadius: 10,
-            borderBottomRightRadius: 10,
-            borderBottomLeftRadius: 10,
-            // width: "100%",
-            // height: 65,
-            // borderTopLeftRadius: 12,
-            // borderTopRightRadius: 12,
-            // objectFit: "cover",
-          }}
+          style={mediaCardStyles.artwork}
           contentFit="cover" // mejor que resizeMode
           transition={500} // fade suave al cargar
           placeholder={require("../../../assets/images/podcasts.png")}
@@ -159,7 +177,7 @@ export default function PodcastGridItem({ podcast, index }: Props) {
 
       {/* Detalles de la podcast */}
       <TouchableOpacity
-        onPress={handlePress}
+        onPress={onPress || handlePress}
         // onPress={() => router.push(`/podcast/${podcast.id}/#comments`)}
         style={{
           paddingTop: 5,
@@ -188,14 +206,14 @@ export default function PodcastGridItem({ podcast, index }: Props) {
           )}
         </View>
 
-        {podcast.commentsCount > 0 && (
+        {(podcast.commentsCount || 0) > 0 && (
           <View className="flex-row mx-[4px] items-center">
             <ThemedText className="text-[9px] text-zinc-400 pr-[2px]">
-              {podcast.averageRating.toFixed(1)}
+              {(podcast.averageRating || 0).toFixed(1)}
             </ThemedText>
             <RatingStars
-              rating={podcast.averageRating}
-              commentsCount={podcast.commentsCount}
+              rating={podcast.averageRating || 0}
+              commentsCount={podcast.commentsCount || 0}
             />
           </View>
         )}
@@ -203,3 +221,15 @@ export default function PodcastGridItem({ podcast, index }: Props) {
     </View>
   );
 }
+
+const resumeStyles = StyleSheet.create({
+  card: { flexDirection: "row", padding: 10, alignItems: "center" },
+  artwork: { width: 88, height: 88, borderRadius: 10 },
+  content: { flex: 1, minWidth: 0, marginLeft: 12 },
+  footer: { flexDirection: "row", alignItems: "center", marginTop: 10 },
+  progressContent: { flex: 1, minWidth: 0 },
+  track: { height: 4, borderRadius: 2, backgroundColor: "#475569", overflow: "hidden" },
+  progress: { height: 4, backgroundColor: "#f43f5e", borderRadius: 2 },
+  play: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#f43f5e", marginLeft: 10,
+    justifyContent: "center", alignItems: "center" },
+});

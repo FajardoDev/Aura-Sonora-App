@@ -1,3 +1,7 @@
+import { useListeningProgress } from "@/presentation/listening/useListeningProgress";
+import { listeningReady, useListeningStore } from "@/presentation/listening/useListeningStore";
+import { scopeForUser } from "@/presentation/listening/listening-model";
+import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import { formatTime } from "@/utils/formatTime";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
@@ -6,24 +10,23 @@ import {
   useAudioPlayer,
   useAudioPlayerStatus,
 } from "expo-audio";
-import { LinearGradient } from "expo-linear-gradient";
+import { Image as ExpoImage } from "expo-image";
 import { Link, usePathname } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useColorScheme } from "nativewind";
 import React, { memo, useEffect, useRef, useState } from "react";
 // import { Animated, Easing } from "react-native";
 import { API_URL } from "@/core/api/radioPodcastApi";
+import { useNowPlaying } from "@/presentation/radio/hooks/useNowPlaying";
+import { useRadioPlayback } from "@/presentation/radio/hooks/useRadioPlayback";
 import {
   ActivityIndicator,
   Animated,
   Dimensions,
   Easing,
-  Image,
-  ImageBackground,
   Modal,
   Pressable,
   Share,
-  StyleSheet,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
@@ -32,6 +35,9 @@ import TextTicker from "react-native-text-ticker";
 import { useAudioPlayerStore } from "../radio/store/useAudioPlayerStore";
 import ThemedText from "../theme/components/themed-text";
 import { PlayerBackground } from "./PlayerBackground";
+import { FullPlayerBackground } from "./FullPlayerBackground";
+import { PlayerFavoriteButton } from "./PlayerFavoriteButton";
+import { useSleepTimer } from "@/presentation/radio/hooks/useSleepTimer";
 
 const AudioPlayer = () => {
   const {
@@ -48,10 +54,17 @@ const AudioPlayer = () => {
     volume,
     setVolume,
     episodeSlug,
+    listeningSource,
 
     // isFavorite,
     type,
   } = useAudioPlayerStore();
+
+  const nowPlaying = useNowPlaying(slug || "", streamUrl || "", type === "radio" && isPlaying);
+  const currentSong = type === "radio" ? nowPlaying.data : undefined;
+  const playerTitle = currentSong?.title || currentSong?.rawTitle || radioName;
+  const playerArtist = currentSong?.title ? currentSong.artist : null;
+  const playerArtwork = currentSong?.artworkUrl || radioimg;
 
   const { colorScheme } = useColorScheme();
   const isDarkMode = colorScheme === "dark";
@@ -59,14 +72,28 @@ const AudioPlayer = () => {
   const pathname = usePathname();
 
   // 1. Inicialización del Reproductor
-  const player = useAudioPlayer(streamUrl || "");
+  const player = useAudioPlayer(null);
   const status = useAudioPlayerStatus(player);
+  const radioPlayback = useRadioPlayback(player);
+  const radioError = type === "radio" ? radioPlayback.playbackError : null;
+  const radioConnecting = type === "radio" && radioPlayback.isConnecting;
+  const displayTitle = radioError || radioConnecting ? radioName : playerTitle;
+  const displayArtist = radioError || radioConnecting ? null : playerArtist;
+  const displayArtwork = radioError || radioConnecting ? radioimg : playerArtwork;
+  const handlePlaybackToggle = () => {
+    if (type === "radio") radioPlayback.toggle();
+    else togglePlay();
+  };
+  const loadedStreamRef = useRef<string | null>(null);
+  const lockScreenActiveRef = useRef(false);
+  const lockScreenTypeRef = useRef<typeof type>(null);
+  const pendingPlaybackRef = useRef<boolean | null>(null);
+  const sourceChangePendingRef = useRef(false);
 
   const [sliderValue, setSliderValue] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekTarget, setSeekTarget] = useState(0);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
-  const [isPlayerLoading, setIsPlayerLoading] = useState(false);
   const [isFullPlayerVisible, setIsFullPlayerVisible] = useState(false);
 
   const translateY = useRef(new Animated.Value(1000)).current;
@@ -120,12 +147,64 @@ const AudioPlayer = () => {
     setAudioModeAsync({
       playsInSilentMode: true,
       shouldPlayInBackground: true,
-      // interruptionModeAndroid: "duckOthers",
-      interruptionModeAndroid: "doNotMix", // El audio de tu app es prioritario
-      interruptionMode: "mixWithOthers",
+      interruptionModeAndroid: "doNotMix",
+      interruptionMode: "doNotMix",
       allowsRecording: false,
-    });
+    }).catch((error) => console.error("Error configurando audio:", error));
   }, []);
+
+  // Una instancia nativa atiende todas las emisoras y episodios.
+  useEffect(() => {
+    if (type === "radio") {
+      loadedStreamRef.current = null;
+      return;
+    }
+    if (loadedStreamRef.current === streamUrl && (streamUrl || !lockScreenActiveRef.current)) return;
+    loadedStreamRef.current = streamUrl;
+    sourceChangePendingRef.current = true;
+    player.pause();
+
+    if (streamUrl) {
+      player.replace(streamUrl);
+    } else {
+      player.clearLockScreenControls();
+      lockScreenActiveRef.current = false;
+      lockScreenTypeRef.current = null;
+      pendingPlaybackRef.current = null;
+    }
+  }, [player, streamUrl, type]);
+
+  // Observe/restore only after the single native player has received its source.
+  useListeningProgress(player, status);
+
+  useEffect(() => {
+    if (!streamUrl || !radioName) return;
+
+    const metadata = type === "radio" && currentSong?.title
+      ? {
+          title: currentSong.title,
+          artist: currentSong.artist || radioName,
+          artworkUrl: playerArtwork || undefined,
+        }
+      : {
+          title: radioName,
+          artist: "Aura Sonora",
+          artworkUrl: radioimg || undefined,
+        };
+
+    if (lockScreenActiveRef.current && lockScreenTypeRef.current === type) {
+      player.updateLockScreenMetadata(metadata);
+    } else {
+      player.setActiveForLockScreen(true, metadata, {
+        showSeekBackward: type === "podcast",
+        showSeekForward: type === "podcast",
+      });
+      lockScreenActiveRef.current = true;
+      lockScreenTypeRef.current = type;
+    }
+  }, [player, streamUrl, slug, radioName, radioimg, type,
+    currentSong?.title, currentSong?.artist, currentSong?.artworkUrl,
+    currentSong?.trackId, playerArtwork]);
 
   // 🎯 2. PERSISTENCIA: Cargar datos al arrancar
   useEffect(() => {
@@ -143,6 +222,10 @@ const AudioPlayer = () => {
           // const savedIsFavorite = await SecureStore.getItemAsync("isFavorite");
           const savedType = await SecureStore.getItemAsync("type");
 
+          await listeningReady();
+          const auth = useAuthStore.getState();
+          const scope = scopeForUser(auth.status === "authenticated" ? auth.user?.id : undefined);
+          const source = useListeningStore.getState().profiles[scope]?.episodes.find(e => e.podcastSlug === savedRadioSlug && e.episodeSlug === savedepisodeSlug);
           setStream(
             savedStream,
             savedRadioName || "",
@@ -151,7 +234,8 @@ const AudioPlayer = () => {
             savedRadioId || "",
             savedepisodeSlug || "",
             // savedIsFavorite === "true", // convertimos string a boolean
-            (savedType as any) || "radio"
+            (savedType as any) || "radio",
+            source ? { source } : undefined
           );
           // Pausamos por defecto al recuperar para no asustar al usuario
           togglePlay(false);
@@ -187,14 +271,36 @@ const AudioPlayer = () => {
       }
     };
 
+    saveState();
+  }, [isPlaying, streamUrl, radioName, radioimg, slug, radioid, episodeSlug, type]);
+
+  useEffect(() => {
+    if (!streamUrl || type === "radio") return;
+    pendingPlaybackRef.current = isPlaying;
     if (isPlaying) player.play();
     else player.pause();
+  }, [player, streamUrl, isPlaying, type]);
 
-    saveState();
-  }, [isPlaying, streamUrl]);
+  // La notificación y los controles externos operan sobre el mismo player.
+  useEffect(() => {
+    if (!streamUrl || type === "radio") return;
+    if (sourceChangePendingRef.current) {
+      sourceChangePendingRef.current = false;
+      return;
+    }
+    if (pendingPlaybackRef.current !== null) {
+      if (status.playing === pendingPlaybackRef.current) {
+        pendingPlaybackRef.current = null;
+      }
+      return;
+    }
+    if (!status.isBuffering && status.playing !== isPlaying) {
+      togglePlay(status.playing);
+    }
+  }, [streamUrl, status.playing, status.isBuffering, isPlaying, togglePlay, type]);
 
   // 🎯 4. LÓGICA DE CONTROL DE CARGA (Buffering)
-  const showLoading = isPlayerLoading || status.isBuffering;
+  const showLoading = type === "radio" ? radioConnecting : status.isBuffering;
 
   // 🎯 5. MANEJO DE SLIDER (Podcast)
   useEffect(() => {
@@ -218,51 +324,27 @@ const AudioPlayer = () => {
 
   const isRadio = type === "radio";
 
-  // 1. Estados necesarios
   const [isSleepModalVisible, setIsSleepModalVisible] = useState(false);
-  const [sleepTimeLeft, setSleepTimeLeft] = useState<number | null>(null);
+  const [isSpeedModalVisible, setIsSpeedModalVisible] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const sleepTimer = useSleepTimer(player, () => {
+    if (type === "radio") radioPlayback.pause();
+    else { player.pause(); togglePlay(false); }
+  }, !!streamUrl);
+  const sleepTimeLeft = sleepTimer.minutesLeft;
+  const sourceLabel = type === "radio" ? radioName
+    : listeningSource?.kind === "podcast" ? listeningSource.podcastTitle : "Podcast";
 
-  // 2. Lógica del Timer con EFECTO PREMIUM (Fade-out Corregido)
   useEffect(() => {
-    let interval: any;
+    if (type !== "podcast") setIsSpeedModalVisible(false);
+    if (!streamUrl || !status.isLoaded) return;
+    player.shouldCorrectPitch = true;
+    player.setPlaybackRate(type === "podcast" ? playbackRate : 1);
+  }, [player, type, streamUrl, status.isLoaded, playbackRate]);
 
-    if (sleepTimeLeft !== null && sleepTimeLeft > 0) {
-      interval = setInterval(() => {
-        setSleepTimeLeft((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
-      }, 60000);
-    } else if (sleepTimeLeft === 0) {
-      // 🛑 IMPORTANTE: Tomamos el volumen actual directamente del hardware (player.volume)
-      // No usamos la variable "volume" del store para evitar el salto.
-      let fadeVol = player.volume;
-
-      const fadeInterval = setInterval(() => {
-        if (fadeVol > 0.05) {
-          // Bajamos hasta que sea casi inaudible
-          fadeVol -= 0.05; // Pasos más pequeños (0.05) para que sea más suave
-          player.volume = fadeVol;
-        } else {
-          // Cuando ya llegamos al mínimo:
-          clearInterval(fadeInterval);
-          player.pause();
-          togglePlay(false);
-          setSleepTimeLeft(null);
-
-          // Restauramos el volumen del hardware DESPUÉS de pausar
-          // Usamos un pequeño delay para asegurar que el audio ya se detuvo
-          setTimeout(() => {
-            player.volume = volume;
-          }, 500);
-        }
-      }, 150); // Intervalo un poco más rápido (150ms) para mayor fluidez
-    }
-
-    return () => clearInterval(interval);
-  }, [sleepTimeLeft]);
-
-  // 3. Función para activar
   const startSleepTimer = (minutes: number) => {
-    setSleepTimeLeft(minutes);
-    setIsSleepModalVisible(false); // 👈 Corregido el nombre
+    sleepTimer.start(minutes);
+    setIsSleepModalVisible(false);
   };
 
   // compartir
@@ -302,6 +384,7 @@ const AudioPlayer = () => {
   if (!streamUrl) return null;
 
   const isPodcast = type === "podcast";
+  const showStationName = type === "radio" && !!radioName && displayTitle !== radioName;
   const bannerMusic = !isPlaying
     ? require("../../assets/images/igualada.png")
     : require("../../assets/images/igualada-reproduciendo.gif");
@@ -347,10 +430,11 @@ const AudioPlayer = () => {
               href={isPodcast ? `/podcast/${slug}` : `/radio-station/${slug}`}
               asChild
             >
-              <Pressable className="flex-row items-center flex-1">
-                <Image
-                  source={{ uri: radioimg as any }}
-                  resizeMode="contain"
+              <Pressable className="flex-row items-center flex-1" style={{ minWidth: 0 }}>
+                <ExpoImage
+                  source={displayArtwork ? { uri: displayArtwork } : undefined}
+                  contentFit="contain"
+                  transition={250}
                   style={{
                     width: 54,
                     height: 54,
@@ -365,9 +449,15 @@ const AudioPlayer = () => {
                     // elevation: 5, // sombra Android
                   }}
                 />
-                <View className="ml-3 flex-1">
+                <View className="ml-3 flex-1" style={{ minWidth: 0, overflow: "hidden" }}>
+                  {showStationName && (
+                    <ThemedText numberOfLines={1} ellipsizeMode="tail"
+                      className="text-rose-500 font-Roboto-SemiBold" style={{ fontSize: 10, lineHeight: 14 }}>
+                      {radioName}
+                    </ThemedText>
+                  )}
                   <TextTicker
-                    style={{ color: textColorClass, fontWeight: "bold" }}
+                    style={{ color: textColorClass, fontWeight: "bold", ...(showStationName ? { fontSize: 13, lineHeight: 18 } : {}) }}
                     duration={10000}
                     loop
                     repeatSpacer={50}
@@ -375,8 +465,19 @@ const AudioPlayer = () => {
                     <ThemedText className="text-rose-500">
                       {isPodcast ? "🎙️ " : "📻 "}
                     </ThemedText>
-                    {radioName}
+                    {displayTitle}
                   </TextTicker>
+                  {displayArtist && (
+                    <ThemedText className="text-xs opacity-70" numberOfLines={1}
+                      style={showStationName ? { fontSize: 11, lineHeight: 14 } : undefined}>
+                      {displayArtist}
+                    </ThemedText>
+                  )}
+                  {(radioConnecting || radioError) && (
+                    <ThemedText className="text-xs opacity-70" numberOfLines={1}>
+                      {radioError ? "No se pudo reproducir" : "Conectando..."}
+                    </ThemedText>
+                  )}
                 </View>
               </Pressable>
             </Link>
@@ -385,6 +486,7 @@ const AudioPlayer = () => {
             <View
               // className="flex-row items-center gap-3 mt-2"
               className={`flex-row items-center gap-3 ${isPodcast ? "mt-2" : "mr-10"}`}
+              style={{ flexShrink: 0 }}
             >
               {isPodcast && (
                 <TouchableOpacity
@@ -403,7 +505,8 @@ const AudioPlayer = () => {
 
               {/* Botón Central Play/Pause (Grande y destacado) */}
               <TouchableOpacity
-                onPress={() => togglePlay()}
+                onPress={handlePlaybackToggle}
+                accessibilityLabel={radioError ? "Reintentar" : showLoading || isPlaying ? "Pausar" : "Reproducir"}
                 activeOpacity={0.8}
                 className="bg-rose-500 rounded-full shadow-lg shadow-rose-500/40 w-16 h-16 items-center justify-center" // Sombra suave (Glow effect)
                 style={{ elevation: 5 }} // Sombra para Android
@@ -415,12 +518,15 @@ const AudioPlayer = () => {
                     style={{ width: 32, height: 32 }}
                   />
                 ) : (
-                  <Ionicons
-                    name={isPlaying ? "pause" : "play"} // Usamos la versión sólida sin circulo para que el botón sea el circulo
-                    size={32}
-                    color="white"
-                    style={{ marginLeft: isPlaying ? 0 : 4 }} // Corrección óptica para centrar el icono de Play
-                  />
+                  <View className="items-center">
+                    <Ionicons
+                      name={radioError ? "reload" : isPlaying ? "pause" : "play"}
+                      size={radioError ? 24 : 32}
+                      color="white"
+                      style={{ marginLeft: isPlaying ? 0 : 4 }}
+                    />
+                    {radioError && <ThemedText className="text-white text-[9px]">Reintentar</ThemedText>}
+                  </View>
                 )}
               </TouchableOpacity>
 
@@ -496,6 +602,7 @@ const AudioPlayer = () => {
         animationType="none"
         presentationStyle="overFullScreen"
         statusBarTranslucent
+        onRequestClose={closeFullPlayer}
       >
         {/* Backdrop */}
         <Animated.View
@@ -506,9 +613,8 @@ const AudioPlayer = () => {
           }}
         />
 
-        <TouchableWithoutFeedback onPress={closeFullPlayer}>
-          {/* Full Player */}
-          <Animated.View
+        {/* Full Player */}
+        <Animated.View
             style={{
               position: "absolute",
               bottom: 0,
@@ -518,23 +624,14 @@ const AudioPlayer = () => {
               transform: [{ translateY }],
             }}
           >
-            <View style={{ flex: 1, backgroundColor: "#000" }}>
-              {/* 1. FONDO CON BLUR (ATMÓSFERA) */}
-              <ImageBackground
-                source={{ uri: radioimg as any }}
-                style={{ ...StyleSheet.absoluteFillObject }}
-                blurRadius={20}
-              >
-                <LinearGradient
-                  colors={["rgba(0,0,0,0.3)", "rgba(0,0,0,0.8)"]}
-                  style={{ flex: 1 }}
-                />
-              </ImageBackground>
+            <View style={{ flex: 1, backgroundColor: "#011016" }}>
+              <FullPlayerBackground artwork={displayArtwork} />
 
               {/* HEADER */}
               <View className="flex-row justify-between items-center pt-12 z-50 px-8">
                 <TouchableOpacity
                   onPress={closeFullPlayer}
+                  accessibilityRole="button" accessibilityLabel="Minimizar reproductor"
                   className="bg-white/10 w-11 h-11 items-center justify-center rounded-full backdrop-blur-md border border-white/20"
                 >
                   <Ionicons name="chevron-down" size={28} color="white" />
@@ -542,16 +639,16 @@ const AudioPlayer = () => {
 
                 <View className="items-center">
                   <ThemedText className="text-white/60 text-[10px] font-black uppercase tracking-[3px]">
-                    Reproduciendo
+                    {radioError ? "Sin conexión" : showLoading ? "Conectando..." : isPlaying ? "Reproduciendo" : "Pausado"}
                   </ThemedText>
                 </View>
 
                 <TouchableOpacity
-                  onPress={() => clearStream()}
+                  onPress={() => { sleepTimer.cancel(); clearStream(); setIsFullPlayerVisible(false); }}
+                  accessibilityRole="button" accessibilityLabel="Detener reproducción"
                   className="bg-rose-500/20 w-11 h-11 items-center justify-center rounded-full border border-rose-500/30"
                 >
-                  {/* <Ionicons name="stop" size={20} color="#f43f5e" /> */}
-                  <Ionicons name="close-circle" size={20} color="#f43f5e" />
+                  <Ionicons name="stop" size={20} color="#f43f5e" />
                 </TouchableOpacity>
               </View>
 
@@ -568,8 +665,9 @@ const AudioPlayer = () => {
                     height: isRadio ? 280 : "50%",
                   }}
                 >
-                  <Image
-                    source={radioimg ? { uri: radioimg } : undefined}
+                  <ExpoImage
+                    source={displayArtwork ? { uri: displayArtwork } : undefined}
+                    transition={300}
                     // className="w-full h-full rounded-3xl border border-white/10"
                     style={{
                       width: "100%",
@@ -577,21 +675,51 @@ const AudioPlayer = () => {
                       borderRadius: 20,
                       backgroundColor: isRadio ? "white" : "",
                     }}
-                    resizeMode={`${type === "podcast" ? "cover" : "contain"}`}
+                    contentFit={type === "podcast" ? "cover" : "contain"}
                   />
                 </View>
 
                 {/* Títulos */}
-                <View className="items-center mt-2">
+                <View className="items-center mt-2 w-full" style={{ backgroundColor: "transparent" }}>
+                  <View className="flex-row items-center justify-center w-full mb-2">
+                    <ThemedText numberOfLines={1} className="text-white/70 text-xs font-Roboto-SemiBold flex-shrink mr-3"
+                      style={{ flexShrink: 1 }}>{sourceLabel}</ThemedText>
+                    <PlayerFavoriteButton type={type} slug={slug} visible={isFullPlayerVisible}
+                      beforeLogin={() => { setIsSleepModalVisible(false); setIsSpeedModalVisible(false); setIsFullPlayerVisible(false); }} />
+                  </View>
                   <TextTicker
-                    // style={{ color: textColorClass, fontWeight: "bold" }}
                     duration={10000}
                     loop
                     repeatSpacer={50}
-                    className="text-white text-2xl font-black text-center mb-3"
+                    style={{
+                      color: "white",
+                      fontSize: 24,
+                      lineHeight: 32,
+                      fontWeight: "900",
+                      textAlign: "center",
+                      marginBottom: 12,
+                      backgroundColor: "transparent",
+                    }}
                   >
-                    {radioName}
+                    {displayTitle}
                   </TextTicker>
+                  {displayArtist && (
+                    <ThemedText className="text-white text-base text-center mb-2" numberOfLines={1}>
+                      {displayArtist}
+                    </ThemedText>
+                  )}
+                  {(radioConnecting || radioError) && (
+                    <View className="items-center mb-3">
+                      <ThemedText className="text-white text-sm text-center">
+                        {radioError || "Conectando..."}
+                      </ThemedText>
+                      {radioError && (
+                        <TouchableOpacity onPress={radioPlayback.retry} accessibilityRole="button" className="mt-2 px-4 py-2 bg-rose-600 rounded-full">
+                          <ThemedText className="text-white">Reintentar</ThemedText>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
 
                   {/* <ThemedText
                     className="text-white text-2xl font-black text-center mb-3"
@@ -602,7 +730,7 @@ const AudioPlayer = () => {
 
                   <View className="bg-rose-600 px-3 py-1 rounded-full mb-2">
                     <ThemedText className="text-white text-[8px] font-bold uppercase tracking-wider">
-                      {type === "podcast" ? "• Podcast Episode" : "• En Vivo"}
+                      {type === "podcast" ? "• Episodio de podcast" : "• En Vivo"}
                     </ThemedText>
                   </View>
                   {/* <ThemedText className="text-rose-500 text-lg mt-1 font-medium">
@@ -672,6 +800,7 @@ const AudioPlayer = () => {
                     {type === "podcast" && (
                       <TouchableOpacity
                         onPress={() => handleSkip(-10)}
+                        accessibilityRole="button" accessibilityLabel="Retroceder 10 segundos"
                         activeOpacity={0.7}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Mejora la experiencia táctil
                       >
@@ -688,7 +817,8 @@ const AudioPlayer = () => {
                     )}
 
                     <TouchableOpacity
-                      onPress={() => togglePlay()}
+                      onPress={handlePlaybackToggle}
+                      accessibilityRole="button" accessibilityLabel={isPlaying ? "Pausar episodio" : "Reproducir episodio"}
                       style={{
                         backgroundColor: "white",
                         width: 80,
@@ -712,6 +842,7 @@ const AudioPlayer = () => {
                     {type === "podcast" && (
                       <TouchableOpacity
                         onPress={() => handleSkip(10)}
+                        accessibilityRole="button" accessibilityLabel="Avanzar 10 segundos"
                         activeOpacity={0.7}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
@@ -733,6 +864,7 @@ const AudioPlayer = () => {
                     <TouchableOpacity
                       className="items-center"
                       onPress={onShare}
+                      accessibilityRole="button" accessibilityLabel="Compartir contenido"
                       activeOpacity={0.7}
                     >
                       <View className="bg-white/10 p-3 rounded-full mb-1">
@@ -748,7 +880,9 @@ const AudioPlayer = () => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      onPress={() => togglePlay()}
+                      onPress={handlePlaybackToggle}
+                      accessibilityRole="button"
+                      accessibilityLabel={radioError ? "Reintentar" : showLoading || isPlaying ? "Pausar" : "Reproducir"}
                       style={{
                         backgroundColor: "white",
                         width: 80,
@@ -762,7 +896,7 @@ const AudioPlayer = () => {
                         <ActivityIndicator size="large" color="#f43f5e" />
                       ) : (
                         <Ionicons
-                          name={isPlaying ? "pause" : "play"}
+                          name={radioError ? "reload" : isPlaying ? "pause" : "play"}
                           size={50}
                           color="#f43f5e"
                         />
@@ -772,13 +906,14 @@ const AudioPlayer = () => {
                     {/* BOTÓN SLEEP TIMER */}
                     <TouchableOpacity
                       className="items-center"
+                      accessibilityRole="button" accessibilityLabel={sleepTimeLeft === null ? "Programar apagado automático" : `Apagado automático: ${sleepTimeLeft} minutos restantes`}
                       onPress={() => setIsSleepModalVisible(true)} // 👈 Nombre corregido
                     >
                       <View className="relative bg-white/10 p-3 rounded-full mb-1">
                         <Ionicons
                           name="timer-outline"
                           size={32}
-                          color={sleepTimeLeft ? "#f43f5e" : "white"}
+                          color={sleepTimeLeft !== null ? "#f43f5e" : "white"}
                         />
                         {sleepTimeLeft !== null && (
                           <View className="absolute -top-2 -right-2 bg-rose-500 rounded-full h-5 w-5 justify-center items-center">
@@ -789,7 +924,7 @@ const AudioPlayer = () => {
                         )}
                       </View>
                       <ThemedText className="text-white text-[10px] font-medium uppercase tracking-wider">
-                        {sleepTimeLeft ? "Activo" : "Dormir"}
+                        {sleepTimeLeft === null ? "Dormir" : sleepTimeLeft === 0 ? "Apagando…" : `${sleepTimeLeft} min`}
                       </ThemedText>
                     </TouchableOpacity>
                   </View>
@@ -802,6 +937,7 @@ const AudioPlayer = () => {
                     <TouchableOpacity
                       className="items-center"
                       onPress={onShare}
+                      accessibilityRole="button" accessibilityLabel="Compartir contenido"
                       activeOpacity={0.7}
                     >
                       <View className="bg-white/10 p-3 rounded-full mb-1">
@@ -816,16 +952,25 @@ const AudioPlayer = () => {
                       </ThemedText>
                     </TouchableOpacity>
 
+                    <TouchableOpacity className="items-center" onPress={() => setIsSpeedModalVisible(true)}
+                      accessibilityRole="button" accessibilityLabel={`Velocidad de reproducción: ${playbackRate} veces`}>
+                      <View className="bg-white/10 w-14 h-14 rounded-full mb-1 items-center justify-center">
+                        <ThemedText className="text-white font-bold text-base">{playbackRate}×</ThemedText>
+                      </View>
+                      <ThemedText className="text-white text-[10px] font-medium uppercase tracking-wider">Velocidad</ThemedText>
+                    </TouchableOpacity>
+
                     {/* BOTÓN SLEEP TIMER */}
                     <TouchableOpacity
                       className="items-center"
+                      accessibilityRole="button" accessibilityLabel={sleepTimeLeft === null ? "Programar apagado automático" : `Apagado automático: ${sleepTimeLeft} minutos restantes`}
                       onPress={() => setIsSleepModalVisible(true)} // 👈 Nombre corregido
                     >
                       <View className="relative bg-white/10 p-3 rounded-full mb-1">
                         <Ionicons
                           name="timer-outline"
                           size={32}
-                          color={sleepTimeLeft ? "#f43f5e" : "white"}
+                          color={sleepTimeLeft !== null ? "#f43f5e" : "white"}
                         />
                         {sleepTimeLeft !== null && (
                           <View className="absolute -top-2 -right-2 bg-rose-500 rounded-full h-5 w-5 justify-center items-center">
@@ -836,7 +981,7 @@ const AudioPlayer = () => {
                         )}
                       </View>
                       <ThemedText className="text-white text-[10px] font-medium uppercase tracking-wider">
-                        {sleepTimeLeft ? "Activo" : "Dormir"}
+                        {sleepTimeLeft === null ? "Dormir" : sleepTimeLeft === 0 ? "Apagando…" : `${sleepTimeLeft} min`}
                       </ThemedText>
                     </TouchableOpacity>
                   </View>
@@ -893,14 +1038,18 @@ const AudioPlayer = () => {
                 >
                   <View className="bg-zinc-900 w-80 rounded-3xl p-6 border border-white/10">
                     <ThemedText className="text-white text-xl font-bold text-center mb-6">
-                      Apagado Automático
+                      Apagado automático
                     </ThemedText>
 
+                    <ThemedText className="text-white/70 text-sm text-center mb-4">
+                      {sleepTimeLeft === null ? "La reproducción se pausará al terminar el tiempo." : sleepTimeLeft === 0 ? "Pausando reproducción…" : `Se pausará en aproximadamente ${sleepTimeLeft} minutos.`}
+                    </ThemedText>
                     <View className="space-y-3">
                       {[5, 10, 15, 30, 45, 60].map((minutes) => (
                         <TouchableOpacity
                           key={minutes}
                           onPress={() => startSleepTimer(minutes)}
+                          accessibilityRole="button" accessibilityLabel={`Pausar en ${minutes} minutos`}
                           className="bg-white/5 py-4 rounded-xl items-center active:bg-rose-500"
                         >
                           <ThemedText className="text-white font-medium">
@@ -912,19 +1061,21 @@ const AudioPlayer = () => {
                       {sleepTimeLeft !== null && (
                         <TouchableOpacity
                           onPress={() => {
-                            setSleepTimeLeft(null);
+                            sleepTimer.cancel();
                             setIsSleepModalVisible(false);
                           }}
+                          accessibilityRole="button" accessibilityLabel="Cancelar apagado automático"
                           className="bg-rose-500/20 py-4 rounded-xl items-center mt-4"
                         >
                           <ThemedText className="text-rose-500 font-bold">
-                            Cancelar Temporizador
+                            Cancelar temporizador
                           </ThemedText>
                         </TouchableOpacity>
                       )}
 
                       <TouchableOpacity
                         onPress={() => setIsSleepModalVisible(false)}
+                        accessibilityRole="button" accessibilityLabel="Cerrar opciones de apagado automático"
                         className="py-4 items-center"
                       >
                         <ThemedText className="text-rose-500 bg-rose-500/20 p-2 rounded-xl font-semibold">
@@ -935,9 +1086,26 @@ const AudioPlayer = () => {
                   </View>
                 </View>
               </Modal>
+              <Modal visible={isSpeedModalVisible} transparent animationType="fade"
+                onRequestClose={() => setIsSpeedModalVisible(false)}>
+                <View className="flex-1 items-center justify-center bg-black/80">
+                  <View className="bg-zinc-900 w-80 rounded-3xl p-6 border border-white/10">
+                    <ThemedText className="text-white text-xl font-bold text-center mb-5">Velocidad de reproducción</ThemedText>
+                    {[1, 1.25, 1.5, 2].map(rate => <TouchableOpacity key={rate}
+                      onPress={() => { setPlaybackRate(rate); setIsSpeedModalVisible(false); }}
+                      accessibilityRole="button" accessibilityState={{ selected: rate === playbackRate }}
+                      accessibilityLabel={`Velocidad ${rate} veces`}
+                      className={`py-3 rounded-xl items-center mb-2 ${rate === playbackRate ? "bg-rose-500" : "bg-white/5"}`}>
+                      <ThemedText className="text-white font-semibold">{rate}×{rate === 1 ? " · Normal" : ""}</ThemedText>
+                    </TouchableOpacity>)}
+                    <TouchableOpacity accessibilityRole="button" onPress={() => setIsSpeedModalVisible(false)} className="py-3 items-center">
+                      <ThemedText className="text-rose-400 font-semibold">Cerrar</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
             </View>
-          </Animated.View>
-        </TouchableWithoutFeedback>
+        </Animated.View>
       </Modal>
     </>
   );

@@ -69,7 +69,39 @@ export const useToggleFavorite = () => {
 			const detailQueryKey: QueryKey = [detailBaseKeyName, toggledSlug];
 
 			// 1. Cancelar queries pendientes (Buena práctica)
-			await queryClient.cancelQueries({ queryKey: [detailBaseKeyName] });
+			await Promise.all([
+				queryClient.cancelQueries({ queryKey: [detailBaseKeyName] }),
+				...(entityType === "radio"
+					? [queryClient.cancelQueries({ queryKey: getListQueryKey(entityType) })]
+					: []),
+			]);
+
+			// Estaciones (incluidas búsquedas): actualizar únicamente la emisora tocada.
+			// Guardar su estado por consulta permite revertir sin perder otros favoritos.
+			const radioListSnapshots = entityType === "radio"
+				? queryClient.getQueriesData<InfiniteData<RadioStationResponse>>({
+					queryKey: getListQueryKey(entityType),
+				}).flatMap(([queryKey, cached]) => {
+					const station = cached?.pages.flatMap(page => page.stations)
+						.find(item => item.id === newFavoriteData.radioStationId);
+					return station ? [{ queryKey, id: station.id, isFavorite: station.isFavorite }] : [];
+				})
+				: [];
+
+			for (const snapshot of radioListSnapshots) {
+				queryClient.setQueriesData<InfiniteData<RadioStationResponse>>(
+					{ queryKey: snapshot.queryKey, exact: true },
+					cached => cached && ({
+						...cached,
+						pages: cached.pages.map(page => ({
+							...page,
+							stations: page.stations.map(station => station.id === snapshot.id
+								? { ...station, isFavorite: !snapshot.isFavorite }
+								: station),
+						})),
+					}),
+				);
+			}
 
 			// 2. Aplicar la actualización Optimista a todas las vistas de detalle en caché.
 			// Esto garantiza que el cambio se refleje al instante en la lista de relacionadas
@@ -226,12 +258,25 @@ export const useToggleFavorite = () => {
 			// 🌟🌟🌟 FIN LÓGICA OPTIMISTA DEL HISTORIAL 🌟🌟🌟
 
 			// Devolver el contexto para el rollback si falla la mutación
-			return { detailBaseKeyName, toggledSlug };
+			return { detailBaseKeyName, toggledSlug, radioListSnapshots };
 		},
 
 		// 2. Si la mutación falla: (Aquí iría el rollback)
 		onError: (err, newFavoriteData, context) => {
-			console.error("[ON_ERROR] 🚨 Mutación fallida. Rollback no implementado.");
+			for (const snapshot of context?.radioListSnapshots ?? []) {
+				queryClient.setQueriesData<InfiniteData<RadioStationResponse>>(
+					{ queryKey: snapshot.queryKey, exact: true },
+					cached => cached && ({
+						...cached,
+						pages: cached.pages.map(page => ({
+							...page,
+							stations: page.stations.map(station => station.id === snapshot.id
+								? { ...station, isFavorite: snapshot.isFavorite }
+								: station),
+						})),
+					}),
+				);
+			}
 		},
 
 		// 3. Después de la mutación: Invalida y fuerza la recarga (en el fondo)
@@ -248,7 +293,7 @@ export const useToggleFavorite = () => {
 			console.log("[ON_SETTLED] 🚀 Finalizada. Forzando invalidación de datos.");
 
 			// A. Invalidar la lista de origen
-			queryClient.invalidateQueries({ queryKey: listQueryKey });
+			const listRefresh = queryClient.invalidateQueries({ queryKey: listQueryKey });
 
 			// B. Invalidar las listas de favoritos
 			queryClient.invalidateQueries({ queryKey: FAVORITES_RADIO_KEY });
@@ -281,6 +326,8 @@ export const useToggleFavorite = () => {
 					refetchType: "all",
 				});
 			}
+			// Mantener el botón ocupado hasta confirmar el estado del catálogo visible.
+			return newFavoriteData.type === "radio" ? listRefresh : undefined;
 		},
 	});
 };

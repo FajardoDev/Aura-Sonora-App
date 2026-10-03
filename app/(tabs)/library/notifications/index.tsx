@@ -1,3 +1,4 @@
+import RequireAuth from "@/presentation/auth/components/RequireAuth";
 import { useNotificationStore } from "@/presentation/radio-podcast/stores/notifications.store";
 import { useAudioPlayerStore } from "@/presentation/radio/store/useAudioPlayerStore";
 import ThemedText from "@/presentation/theme/components/themed-text";
@@ -10,7 +11,7 @@ import {
   View,
 } from "react-native";
 
-export default function PushAppNotifications() {
+function PushAppNotifications() {
   const { notifications, isLoading, fetchNotifications, markAllAsRead } =
     useNotificationStore();
   const { streamUrl } = useAudioPlayerStore();
@@ -107,4 +108,8 @@ export default function PushAppNotifications() {
       />
     </View>
   );
+}
+
+export default function ProtectedScreen() {
+  return <RequireAuth><PushAppNotifications /></RequireAuth>;
 }

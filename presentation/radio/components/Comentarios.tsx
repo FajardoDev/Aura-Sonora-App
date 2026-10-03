@@ -1,3 +1,6 @@
+import { PodcastSectionLayout } from "@/presentation/podcast/components/PodcastSectionList";
+import { RatingStars } from "./RatingStars";
+import { useAuthNavigation } from "@/presentation/auth/hooks/useAuthNavigation";
 /* eslint-disable react/display-name */
 import { useCommentMutations } from "@/core/radio-podcast/actions/radio-podcast/hooks/useCommentMutations";
 import { LastComment } from "@/core/radio-podcast/interface/radio/radio-station-responce-by-slug.interface";
@@ -5,8 +8,8 @@ import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import ThemedText from "@/presentation/theme/components/themed-text";
 import { ThemedView } from "@/presentation/theme/components/themed-view";
 import { Link, router, usePathname } from "expo-router";
-import React, { memo } from "react";
-import { ActivityIndicator } from "react-native";
+import React, { memo, useState } from "react";
+import { ActivityIndicator, TouchableOpacity } from "react-native";
 import { useComments } from "../hooks/useComments";
 import { useAudioPlayerStore } from "../store/useAudioPlayerStore";
 import ComentariosForm from "./ComentariosForm";
@@ -18,12 +21,16 @@ interface ComentariosProps {
   // initialComments?: LastComment[];
   title?: string;
   cantidad: number;
+  averageRating?: number;
+  sectionLayout?: PodcastSectionLayout;
 }
 
 const Comentarios: React.FC<ComentariosProps> = memo(
-  ({ type, entityId, title, cantidad }) => {
+  ({ type, entityId, title, cantidad, averageRating = 0, sectionLayout }) => {
+    const [writingReview, setWritingReview] = useState(false);
     const { status, user, setLastRoute } = useAuthStore();
     const pathname = usePathname();
+    const { requestLogin } = useAuthNavigation();
 
     const { clearStream } = useAudioPlayerStore();
 
@@ -89,7 +96,7 @@ const Comentarios: React.FC<ComentariosProps> = memo(
     // };
 
     // 💡 Cargando inicial (bloquea la UI)
-    if (commentsQuery.isLoading) {
+    if (commentsQuery.isLoading && !sectionLayout) {
       return (
         <ThemedView style={{ padding: 20, alignItems: "center" }}>
           <ActivityIndicator color={"#f43f5e"} />
@@ -99,7 +106,7 @@ const Comentarios: React.FC<ComentariosProps> = memo(
     }
 
     // 💡 Manejo de error
-    if (commentsQuery.isError) {
+    if (commentsQuery.isError && !sectionLayout) {
       return (
         <ThemedView style={{ padding: 20, alignItems: "center" }}>
           <ThemedText style={{ color: "red" }}>
@@ -109,8 +116,7 @@ const Comentarios: React.FC<ComentariosProps> = memo(
       );
     }
 
-    return (
-      <ThemedView className="mt-6 px-4">
+    const intro = <ThemedView className={sectionLayout ? "mt-6 px-4" : undefined}>
         <ThemedText className="text-white font-semibold mb-3 text-lg">
           <ThemedText>Opiniones sobre</ThemedText>{" "}
           <ThemedText className="text-rose-500">
@@ -118,11 +124,21 @@ const Comentarios: React.FC<ComentariosProps> = memo(
           </ThemedText>
         </ThemedText>
 
+        {sectionLayout && cantidad > 0 && <ThemedView className="flex-row items-center mb-3">
+          <RatingStars rating={averageRating} commentsCount={cantidad} />
+          <ThemedText className="ml-2 text-zinc-400">{averageRating.toFixed(1)} de 5</ThemedText>
+        </ThemedView>}
+
         {status === "authenticated" ? (
-          <ComentariosForm onSubmit={handleSubmitComment} />
+          !sectionLayout || writingReview ? <ComentariosForm onSubmit={handleSubmitComment} /> :
+            <TouchableOpacity accessibilityRole="button" onPress={() => setWritingReview(true)}
+              className="bg-rose-500 py-3 px-4 rounded-xl mb-3 self-start">
+              <ThemedText className="text-white font-semibold">Escribir opinión</ThemedText>
+            </TouchableOpacity>
         ) : (
           <Link
             href="/auth/login"
+            onPress={(event) => { event.preventDefault(); requestLogin(); }}
             // onPress={handleSend}
             // onPress={() => router.push("/auth/login/login")}
             className="bg-rose-500 py-2 px-4 rounded-xl mb-3 w-56"
@@ -133,7 +149,23 @@ const Comentarios: React.FC<ComentariosProps> = memo(
           </Link>
         )}
 
-        <ThemedText className="text-lg">Comentarios: {cantidad}</ThemedText>
+        {!sectionLayout && <ThemedText className="text-lg">Comentarios: {cantidad}</ThemedText>}
+        {sectionLayout && commentsQuery.isLoading && <ActivityIndicator color="#f43f5e" />}
+        {sectionLayout && commentsQuery.isError && <ThemedText onPress={() => commentsQuery.refetch()} className="text-rose-500 my-4">No se pudieron cargar las opiniones. Toca para reintentar.</ThemedText>}
+
+    </ThemedView>;
+
+    if (sectionLayout) return <ComentariosList
+      comments={allComments as LastComment[]} onUpdate={handleUpdateComment} onDelete={handleDeleteComment}
+      currentUserId={user?.id} type={type} entityId={entityId}
+      loadNextPage={loadNextPage} isFetchingNextPage={commentsQuery.isFetchingNextPage}
+      hasNextPage={hasNextPage} sectionLayout={sectionLayout} intro={intro}
+      loading={commentsQuery.isLoading || commentsQuery.isError}
+    />;
+
+    return (
+      <ThemedView className="mt-6 px-4">
+        {intro}
 
         <ThemedView className="mb-10">
           <ComentariosList

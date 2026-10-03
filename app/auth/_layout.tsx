@@ -1,3 +1,5 @@
+import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
+import { getAuthReturnRoute } from "@/presentation/auth/hooks/useAuthNavigation";
 // import { useAuth, useUser } from "@clerk/clerk-expo";
 import { PlayerBackground } from "@/presentation/components/PlayerBackground";
 import ThemedText from "@/presentation/theme/components/themed-text";
@@ -18,14 +20,12 @@ export default function AuthLayout() {
 
   // Función personalizada de navegación atrás
   const handleGoBack = () => {
-    // ✅ Si vienes desde un slug, regresa al index
-    if (pathname.startsWith("/auth/login")) {
-      // router.back();
-      router.push("./register");
-    } else {
-      // Si no, simplemente retrocede
-      router.push("./login");
-    }
+    const destination = getAuthReturnRoute(useAuthStore.getState().lastRoute);
+    // A private destination would immediately request login again.
+    const privateRoute = /^\/(?:favorites|library\/(?:history|notifications))(?:\/|$)/.test(destination);
+    void useAuthStore.getState().clearLastRoute();
+    // Reuse the existing tabs route, which owns the currently playing audio.
+    router.dismissTo((privateRoute ? "/home" : destination) as import("expo-router").Href);
   };
 
   // console.log(pathname);

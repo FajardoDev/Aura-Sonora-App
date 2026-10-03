@@ -8,11 +8,12 @@ import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 // };
 const ITEMS_PER_PAGE = 21;
 
-export const usePodcast = (searchQuery: string = "") => {
+export const usePodcast = (searchQuery: string = "", enabled = true) => {
 	const podcastQuery = useInfiniteQuery({
 		queryKey: ["podcastrd", "infinite", searchQuery],
-		queryFn: ({ pageParam = 1 }) =>
-			fetchPodcasts(pageParam as number, ITEMS_PER_PAGE, searchQuery),
+		enabled,
+		queryFn: ({ pageParam = 1, signal }) =>
+			fetchPodcasts(pageParam as number, ITEMS_PER_PAGE, searchQuery, signal),
 		// enabled: searchQuery.trim() !== "", // 🚀 Solo busca si hay texto
 		// refetchOnWindowFocus: false, // ❌ No revalida al volver a la app
 		// refetchOnReconnect: false, // ❌ No revalida si se reconecta a la red

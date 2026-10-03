@@ -1,3 +1,4 @@
+import { useAuthStore } from "@/presentation/auth/store/useAuthStore";
 import { InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { getFavorites } from "../actions/radio-podcast/actions/post-toggle-favorites.action";
 import { EntityType, Podcast } from "../interface/radio-podcast/historys.interface";
@@ -88,6 +89,7 @@ const transformFavoriteData = ( data: FavoriteListRespons | undefined ): FlatFav
  * Hook para obtener la lista de favoritos (radios o podcasts) con paginación infinita.
  * */
 export const useFetchFavorites = ( entityType: EntityType ) => {
+    const authenticated = useAuthStore((state) => state.status === "authenticated");
     // const queryClient = useQueryClient();
 
     const favoriteQuery = useInfiniteQuery<
@@ -97,6 +99,7 @@ export const useFetchFavorites = ( entityType: EntityType ) => {
     >( {
         // La queryKey debe cambiar si cambia el tipo ('radio' o 'podcast')
         queryKey: ['favorites', 'infinite', entityType],
+        enabled: authenticated,
 
         queryFn: ( { pageParam = 1 } ) =>
             getFavorites( {

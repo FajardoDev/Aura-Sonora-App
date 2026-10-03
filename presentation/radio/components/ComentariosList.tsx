@@ -1,18 +1,23 @@
+import PodcastSectionList, { PodcastSectionLayout } from "@/presentation/podcast/components/PodcastSectionList";
 /* eslint-disable react/display-name */
 import { LastComment } from "@/core/radio-podcast/interface/radio/radio-station-responce-by-slug.interface";
 import ThemedText from "@/presentation/theme/components/themed-text";
 import { useQueryClient } from "@tanstack/react-query";
-import React, { memo, useState } from "react";
+import React, { memo, ReactElement, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { useAudioPlayerStore } from "../store/useAudioPlayerStore";
 import ComentarioItem from "./ComentarioItem";
 
 interface Props {
+  sectionLayout?: PodcastSectionLayout;
+  intro?: ReactElement;
+  loading?: boolean;
   comments: LastComment[];
   onUpdate: (id: string, content: string, rating: number) => void;
   onDelete: (id: string) => void;
@@ -35,6 +40,7 @@ const ComentariosList: React.FC<Props> = memo(
     entityId,
     isFetchingNextPage,
     hasNextPage,
+    sectionLayout, intro, loading,
   }) => {
     const { streamUrl } = useAudioPlayerStore();
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -82,6 +88,22 @@ const ComentariosList: React.FC<Props> = memo(
         loadNextPage();
       }
     };
+
+    if (sectionLayout) return <PodcastSectionList
+      {...sectionLayout} items={comments} itemKey={comment => comment.id} intro={intro}
+      renderItem={(comment, index) => <View className="px-4"><ComentarioItem
+        comment={comment} currentUserId={currentUserId} onUpdate={onUpdate} onDelete={onDelete}
+        isLast={index === comments.length - 1}
+      /></View>}
+      empty={loading ? undefined : <ThemedText className="mx-4 my-6 text-zinc-400">Sé el primero en compartir tu opinión.</ThemedText>}
+      footer={<View className="px-4 py-4">
+        {isFetchingNextPage ? <ActivityIndicator color="#f43f5e" /> : hasNextPage ?
+          <TouchableOpacity accessibilityRole="button" onPress={loadNextPage}
+            className="bg-rose-500 rounded-xl py-3 items-center">
+            <ThemedText className="text-white font-semibold">Mostrar más opiniones</ThemedText>
+          </TouchableOpacity> : null}
+      </View>}
+    />;
 
     return (
       <FlatList

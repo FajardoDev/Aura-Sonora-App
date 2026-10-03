@@ -34,7 +34,17 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
+.env.*
+!.env.example
+!.env.template
 .env*.local
+
+# local credentials
+*.keystore
+*service-account*.json
+*ServiceAccount*.json
+*:Zone.Identifier
 
 
 
@@ -50,5 +60,3 @@ app-example
 
 google-services.json
 aura-sonora-push-notification-firebase-adminsdk-fbsvc-de13612e8f.json
-
-
