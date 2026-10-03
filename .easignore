@@ -33,7 +33,21 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
+.env.*
 .env*.local
+
+# local credentials and Firebase configuration (provided by EAS FILE variable)
+*.keystore
+*service-account*.json
+*ServiceAccount*.json
+*firebase-adminsdk*.json
+credentials.json
+google-services.json
+*:Zone.Identifier
+.aws/
+.agents/
+.codex/
 
 # typescript
 *.tsbuildinfo
@@ -43,5 +57,4 @@ app-example
 # generated native folders
 /ios
 /android
-
 
